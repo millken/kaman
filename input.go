@@ -14,6 +14,7 @@ func RegisterInput(name string, input func() interface{}) {
 	if _, ok := input_plugins[name]; ok {
 		log.Fatalln("input: Register called twice for input " + name)
 	}
+	log.Println("RegisterInput: ", name)
 
 	input_plugins[name] = input
 }

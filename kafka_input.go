@@ -1,0 +1,186 @@
+package main
+
+import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"github.com/Shopify/sarama"
+	"github.com/bbangert/toml"
+	"log"
+	"os"
+	"path/filepath"
+	"sync/atomic"
+	"time"
+)
+
+type KafkaInputConfig struct {
+	Id                         string
+	Addrs                      []string
+	MetadataRetries            int    `toml:"metadata_retries"`
+	WaitForElection            uint32 `toml:"wait_for_election"`
+	BackgroundRefreshFrequency uint32 `toml:"background_refresh_frequency"`
+
+	// Broker Config
+	MaxOpenRequests int    `toml:"max_open_reqests"`
+	DialTimeout     uint32 `toml:"dial_timeout"`
+	ReadTimeout     uint32 `toml:"read_timeout"`
+	WriteTimeout    uint32 `toml:"write_timeout"`
+
+	// Consumer Config
+	Topic            string
+	Partition        int32
+	DefaultFetchSize int32  `toml:"default_fetch_size"`
+	MinFetchSize     int32  `toml:"min_fetch_size"`
+	MaxMessageSize   int32  `toml:"max_message_size"`
+	MaxWaitTime      uint32 `toml:"max_wait_time"`
+	EventBufferSize  int    `toml:"event_buffer_size"`
+	OffsetValue      int64
+}
+
+type KafkaInput struct {
+	processMessageCount    int64
+	processMessageFailures int64
+
+	config             *KafkaInputConfig
+	common             *PluginCommonConfig
+	clientConfig       *sarama.Config
+	consumer           sarama.Consumer
+	checkpointFile     *os.File
+	stopChan           chan bool
+	checkpointFilename string
+}
+
+func (k *KafkaInput) writeCheckpoint(offset int64) (err error) {
+	if k.checkpointFile == nil {
+		if k.checkpointFile, err = os.OpenFile(k.checkpointFilename,
+			os.O_WRONLY|os.O_SYNC|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
+			return
+		}
+	}
+	k.checkpointFile.Seek(0, 0)
+	err = binary.Write(k.checkpointFile, binary.LittleEndian, &offset)
+	return
+}
+
+func (k *KafkaInput) Init(pcf *PluginCommonConfig, conf toml.Primitive) (err error) {
+	log.Println("KafkaInput Init.")
+	k.common = pcf
+	hn, err := os.Hostname()
+	if err != nil {
+		hn = "kafkaserver"
+	}
+	k.config = &KafkaInputConfig{
+		Id:                         hn,
+		MetadataRetries:            3,
+		WaitForElection:            250,
+		BackgroundRefreshFrequency: 10 * 60 * 1000,
+		MaxOpenRequests:            4,
+		DialTimeout:                60 * 1000,
+		ReadTimeout:                60 * 1000,
+		WriteTimeout:               60 * 1000,
+		DefaultFetchSize:           1024 * 32,
+		MinFetchSize:               1,
+		MaxWaitTime:                250,
+		EventBufferSize:            16,
+		OffsetValue:                0,
+	}
+	if err := toml.PrimitiveDecode(conf, k.config); err != nil {
+		return fmt.Errorf("Can't unmarshal kafka config: %s", err)
+	}
+	if len(k.config.Addrs) == 0 {
+		return errors.New("addrs must have at least one entry")
+	}
+	k.clientConfig = sarama.NewConfig()
+	k.clientConfig.Metadata.Retry.Max = k.config.MetadataRetries
+	k.clientConfig.Metadata.Retry.Backoff = time.Duration(k.config.WaitForElection) * time.Millisecond
+	k.clientConfig.Metadata.RefreshFrequency = time.Duration(k.config.BackgroundRefreshFrequency) * time.Millisecond
+
+	k.clientConfig.Net.MaxOpenRequests = k.config.MaxOpenRequests
+	k.clientConfig.Net.DialTimeout = time.Duration(k.config.DialTimeout) * time.Millisecond
+	k.clientConfig.Net.ReadTimeout = time.Duration(k.config.ReadTimeout) * time.Millisecond
+	k.clientConfig.Net.WriteTimeout = time.Duration(k.config.WriteTimeout) * time.Millisecond
+
+	k.clientConfig.Consumer.Fetch.Default = k.config.DefaultFetchSize
+	k.clientConfig.Consumer.Fetch.Min = k.config.MinFetchSize
+	k.clientConfig.Consumer.Fetch.Max = k.config.MaxMessageSize
+	k.clientConfig.Consumer.MaxWaitTime = time.Duration(k.config.MaxWaitTime) * time.Millisecond
+	k.checkpointFilename = filepath.Join("kafka",
+		fmt.Sprintf("%s.%d.offset.bin", k.config.Topic, k.config.Partition))
+	if fileExists(k.checkpointFilename) {
+		if k.config.OffsetValue, err = readCheckpoint(k.checkpointFilename); err != nil {
+			return fmt.Errorf("readCheckpoint %s", err)
+		}
+	} else {
+		if err = os.MkdirAll(filepath.Dir(k.checkpointFilename), 0766); err != nil {
+			return
+		}
+		k.config.OffsetValue = sarama.OffsetOldest
+	}
+
+	k.consumer, err = sarama.NewConsumer(k.config.Addrs, k.clientConfig)
+	return
+}
+
+func (k *KafkaInput) Run(runner InputRunner) (err error) {
+	log.Printf("KafkaInput Run. Topic: %s, Partition: %d, OffsetValue: %d\n", k.config.Topic, k.config.Partition, k.config.OffsetValue)
+	k.stopChan = make(chan bool)
+	consumer, err := k.consumer.ConsumePartition(k.config.Topic, k.config.Partition, k.config.OffsetValue)
+	defer func() {
+		k.consumer.Close()
+		consumer.Close()
+		if k.checkpointFile != nil {
+			k.checkpointFile.Close()
+		}
+	}()
+consumerLoop:
+	for {
+		select {
+		case err := <-consumer.Errors():
+			log.Printf("%q", err)
+		case message := <-consumer.Messages():
+			//log.Printf("\nkey=%s value=%s\n Topic=%s\nPartition=%d\nOffset=%d\n", message.Key, message.Value, message.Topic, message.Partition, message.Offset)
+			atomic.AddInt64(&k.processMessageCount, 1)
+			if err = k.writeCheckpoint(message.Offset + 1); err != nil {
+				return
+			}
+			pack := <-runner.InChan()
+
+			pack.MsgBytes = message.Value
+			pack.Msg.Tag = k.common.Tag
+			pack.Msg.Timestamp = time.Now().Unix()
+			runner.RouterChan() <- pack
+
+		case <-k.stopChan:
+			break consumerLoop
+		}
+	}
+	return
+}
+
+func (k *KafkaInput) Stop() {
+	close(k.stopChan)
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func readCheckpoint(filename string) (offset int64, err error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	err = binary.Read(file, binary.LittleEndian, &offset)
+	return
+}
+
+func init() {
+	RegisterInput("KafkaInput", func() interface{} {
+		return new(KafkaInput)
+	})
+}

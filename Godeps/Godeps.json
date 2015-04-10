@@ -1,0 +1,30 @@
+{
+	"ImportPath": "git.oschina.net/millken/kafkaman",
+	"GoVersion": "go1.4.1",
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/snappy-go/snappy",
+			"Comment": "null-15",
+			"Rev": "12e4b4183793ac4b061921e7980845e750679fd0"
+		},
+		{
+			"ImportPath": "github.com/Shopify/sarama",
+			"Comment": "v1.2.0",
+			"Rev": "fcf765a8b80c7b3a5ba1cb3bb9036261502b1ee8"
+		},
+		{
+			"ImportPath": "github.com/bbangert/toml",
+			"Rev": "a2063ce2e5cf10e54ab24075840593d60f59b611"
+		},
+		{
+			"ImportPath": "github.com/eapache/go-resiliency/breaker",
+			"Comment": "v1.0.0",
+			"Rev": "6800482f2c813e689c88b7ed3282262385011890"
+		},
+		{
+			"ImportPath": "github.com/eapache/queue",
+			"Comment": "v1.0.1",
+			"Rev": "c0c762fac2fc60e07f19af79c19164ac588329de"
+		}
+	]
+}

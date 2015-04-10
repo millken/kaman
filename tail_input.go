@@ -4,32 +4,32 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/bbangert/toml"
 )
 
 type TailInputConfig struct {
-	Path string
-	PosFile  string    `toml:"pos_file"`
+	Path    string
+	PosFile string `toml:"pos_file"`
 }
 
 type TailInput struct {
-	config             *TailInputConfig
+	config *TailInputConfig
 	common *PluginCommonConfig
 }
 
-func (this *TailInput) Init( pcf *PluginCommonConfig, conf toml.Primitive) (err error) {
-		this.common = pcf
-		this.config = &TailInputConfig{
-		Path:                   "/var/log/messages",
-		PosFile:                "/tmp/tail.pos",
-		}	
-		if err := toml.PrimitiveDecode(conf, this.config); err != nil {
-			return fmt.Errorf("Can't unmarshal tail config: %s", err)
-		}
-		return nil
+func (this *TailInput) Init(pcf *PluginCommonConfig, conf toml.Primitive) (err error) {
+	this.common = pcf
+	this.config = &TailInputConfig{
+		Path:    "/var/log/messages",
+		PosFile: "/tmp/tail.pos",
+	}
+	if err := toml.PrimitiveDecode(conf, this.config); err != nil {
+		return fmt.Errorf("Can't unmarshal tail config: %s", err)
+	}
+	return nil
 }
 
 func (this *TailInput) Run(runner InputRunner) (err error) {
@@ -54,7 +54,7 @@ func (this *TailInput) Run(runner InputRunner) (err error) {
 				}
 				nsize = finfo.Size()
 				if osize > nsize {
-					break;
+					break
 				}
 				//log.Printf("osize=%d, nsize=%d  finfo.size=%d", osize, nsize,  finfo.Size())
 				if nsize != osize {
@@ -65,7 +65,7 @@ func (this *TailInput) Run(runner InputRunner) (err error) {
 							break
 						}
 						row = append(row, string(buf))
-						
+
 					}
 					pack := <-runner.InChan()
 					pack.MsgBytes = []byte(strings.Join(row, ""))
@@ -74,7 +74,7 @@ func (this *TailInput) Run(runner InputRunner) (err error) {
 					runner.RouterChan() <- pack
 					osize = nsize
 				}
-				
+
 				time.Sleep(250 * time.Millisecond)
 
 			}

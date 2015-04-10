@@ -23,12 +23,12 @@ format:
 build: 
 	godep go build
 
-release: assets
-	gox -osarch="darwin/amd64 darwin/386 linux/amd64 linux/386 windows/amd64 windows/386" -output="./bin/mkdns_{{.OS}}_{{.Arch}}"
+release: 
+	gox -osarch="darwin/amd64 darwin/386 linux/amd64 linux/386 windows/amd64 windows/386" -output="./bin/kafkaman_{{.OS}}_{{.Arch}}"
 
 setup:
+	go get github.com/mitchellh/gox
 	go get github.com/tools/godep
-	go get github.com/bbangert/toml
 	godep restore
 
 clean:

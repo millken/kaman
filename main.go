@@ -16,7 +16,7 @@ func main() {
 	p := flag.String("p", "", "write cpu profile to file")
 	v := flag.String("v", "error.log", "log file path")
 	flag.Parse()
-	
+
 	f, err := os.OpenFile(*v, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalln("os.Open failed, err:", err)
@@ -33,7 +33,7 @@ func main() {
 			log.Println(http.ListenAndServe("0.0.0.0:"+*p, nil))
 		}()
 	}
-	
+
 	masterConf, plugConf, err := LoadConfig(*c)
 	if err != nil {
 		log.Fatalln("read config failed, err:", err)
@@ -44,5 +44,5 @@ func main() {
 	}
 	pipeline.Run()
 	log.Printf("masterConfig: %v\npulgConf : %v", masterConf, plugConf)
-	
+
 }

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
-	"sync/atomic"
-	"regexp"
 	"fmt"
+	"log"
+	"regexp"
+	"sync/atomic"
 
 	"github.com/bbangert/toml"
 )
@@ -77,8 +77,8 @@ func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 	for k, v := range plugConfig {
 
 		plugCommon := &PluginCommonConfig{
-			Type : "",
-			Tag : "",
+			Type: "",
+			Tag:  "",
 		}
 		if err := toml.PrimitiveDecode(v, plugCommon); err != nil {
 			return fmt.Errorf("Can't unmarshal config: %s", err)
@@ -126,8 +126,8 @@ func (this *Pipeline) Run() {
 		cf := output_config.(toml.Primitive)
 
 		plugCommon := &PluginCommonConfig{
-			Type : "",
-			Tag : "",
+			Type: "",
+			Tag:  "",
 		}
 		toml.PrimitiveDecode(cf, plugCommon)
 		inChan := make(chan *PipelinePack, PoolSize)

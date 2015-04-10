@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"github.com/bbangert/toml"
+	"log"
 )
 
 type StdoutOutput struct {

@@ -1,4 +1,5 @@
 package main
+
 import (
 	"github.com/bbangert/toml"
 )
@@ -15,5 +16,5 @@ type Output interface {
 
 type PluginCommonConfig struct {
 	Type string `toml:"type"`
-	Tag string `toml:"tag"`
+	Tag  string `toml:"tag"`
 }

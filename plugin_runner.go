@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"github.com/bbangert/toml"
+	"log"
 )
 
 type InputRunner interface {
@@ -32,13 +32,13 @@ func (this *iRunner) RouterChan() chan *PipelinePack {
 }
 
 func (this *iRunner) Start(conf toml.Primitive) {
-		plugCommon := &PluginCommonConfig{
-			Type : "",
-			Tag : "",
-		}
-		if err := toml.PrimitiveDecode(conf, plugCommon); err != nil {
-			log.Fatalln("toml struct error")
-		}			
+	plugCommon := &PluginCommonConfig{
+		Type: "",
+		Tag:  "",
+	}
+	if err := toml.PrimitiveDecode(conf, plugCommon); err != nil {
+		log.Fatalln("toml struct error")
+	}
 
 	input, ok := input_plugins[plugCommon.Type]
 	if !ok {
@@ -78,13 +78,13 @@ func (this *oRunner) InChan() chan *PipelinePack {
 }
 
 func (this *oRunner) Start(cf toml.Primitive) {
-		plugCommon := &PluginCommonConfig{
-			Type : "",
-			Tag : "",
-		}
-		if err := toml.PrimitiveDecode(cf, plugCommon); err != nil {
-			log.Fatalln("toml struct error")
-		}	
+	plugCommon := &PluginCommonConfig{
+		Type: "",
+		Tag:  "",
+	}
+	if err := toml.PrimitiveDecode(cf, plugCommon); err != nil {
+		log.Fatalln("toml struct error")
+	}
 
 	output_plugin, ok := output_plugins[plugCommon.Type]
 	if !ok {
