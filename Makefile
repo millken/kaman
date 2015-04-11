@@ -33,4 +33,5 @@ setup:
 
 clean:
 	rm -f ./bin/*
+	rm -f kaman
 

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+
+	"git.oschina.net/millken/kaman/plugins"
 )
 
 var logs *log.Logger
@@ -38,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("read config failed, err:", err)
 	}
-	pipeline := NewPipeLine()
+	pipeline := plugins.NewPipeLine()
 	if err := pipeline.LoadConfig(plugConf); err != nil {
 		log.Fatalln("load config failed, err:", err)
 	}
