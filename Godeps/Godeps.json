@@ -27,6 +27,15 @@
 			"Rev": "c0c762fac2fc60e07f19af79c19164ac588329de"
 		},
 		{
+			"ImportPath": "github.com/millken/go-ipdb",
+			"Comment": "20150130-2-gbd7298a",
+			"Rev": "bd7298a07a910aabccc2d6301e04f638cc8d92e2"
+		},
+		{
+			"ImportPath": "github.com/ugorji/go/codec",
+			"Rev": "141348dbea35c4425d2a70b3bae4c9b8925c3c59"
+		},
+		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Comment": "r2015.01.24",
 			"Rev": "c6a7dce14133ccac2dcac3793f1d6e2ef048503a"
