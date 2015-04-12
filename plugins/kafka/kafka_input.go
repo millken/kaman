@@ -137,7 +137,7 @@ consumerLoop:
 	for {
 		select {
 		case err := <-consumer.Errors():
-			log.Printf("%q", err)
+			log.Printf("consumer loop err : %q", err)
 		case message := <-consumer.Messages():
 			//log.Printf("\nkey=%s value=%s\n Topic=%s\nPartition=%d\nOffset=%d\n", message.Key, message.Value, message.Topic, message.Partition, message.Offset)
 			atomic.AddInt64(&k.processMessageCount, 1)
@@ -149,6 +149,11 @@ consumerLoop:
 			pack.MsgBytes = message.Value
 			pack.Msg.Tag = k.common.Tag
 			pack.Msg.Timestamp = time.Now().Unix()
+			pack, err = plugins.PipeFilter(k.common.Filter, pack)
+			if err != nil {
+				log.Printf("filter [%s] err : %s", k.common.Filter, err)
+				continue
+			}
 			runner.RouterChan() <- pack
 
 		case <-k.stopChan:

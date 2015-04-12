@@ -14,6 +14,7 @@ func RegisterOutput(name string, out func() interface{}) {
 	if _, ok := output_plugins[name]; ok {
 		log.Fatalln("output: Register called twice for output " + name)
 	}
+	log.Println("RegisterPlugin: ", name)
 
 	output_plugins[name] = out
 }

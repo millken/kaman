@@ -76,10 +76,7 @@ func NewPipeLine() *Pipeline {
 func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 	for k, v := range plugConfig {
 
-		plugCommon := &PluginCommonConfig{
-			Type: "",
-			Tag:  "",
-		}
+		plugCommon := &PluginCommonConfig{}
 		if err := toml.PrimitiveDecode(v, plugCommon); err != nil {
 			return fmt.Errorf("Can't unmarshal config: %s", err)
 		}
@@ -96,7 +93,7 @@ func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 		case "Output":
 			this.OutputRunners = append(this.OutputRunners, v)
 		}
-		log.Printf("%s : %s: %s", k, pluginType, plugCommon.Type)
+		log.Printf("%s => %s", k, plugCommon.Type)
 	}
 
 	return nil

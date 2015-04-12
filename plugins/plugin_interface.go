@@ -14,7 +14,12 @@ type Output interface {
 	Run(out OutputRunner) error
 }
 
+type Filter interface {
+	Run(pack *PipelinePack) (*PipelinePack, error)
+}
+
 type PluginCommonConfig struct {
-	Type string `toml:"type"`
-	Tag  string `toml:"tag"`
+	Type   string `toml:"type"`
+	Tag    string `toml:"tag"`
+	Filter string `toml:"filter"`
 }
