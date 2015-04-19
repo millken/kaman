@@ -141,6 +141,9 @@ func (self *MongodbNgx1Output) Run(runner plugins.OutputRunner) error {
 			continue
 		}
 		for _, server := range _ngx.Servers {
+			if server.ServerIdentity == "_" {
+				continue
+			}
 			server.HostName = _ngx.HostName
 			server.DateTime = time.Now()
 			err = coll.Insert(server)

@@ -93,6 +93,11 @@ func (hli *HttpListenInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Prim
 }
 
 func (hli *HttpListenInput) Run(runner plugins.InputRunner) (err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Fatalln("recover panic at err:", err)
+		}
+	}()
 	hli.ir = runner
 	err = hli.starterFunc(hli)
 	if err != nil {
