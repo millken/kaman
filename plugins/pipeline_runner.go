@@ -105,6 +105,9 @@ func (this *Pipeline) Run() {
 	PoolSize := 1000
 	rChan := make(chan *PipelinePack, PoolSize)
 	this.router.AddInChan(rChan)
+	if len(this.InputRunners) == 0 {
+		log.Fatalln("InputRunner requires that at least one")
+	}
 
 	for _, input_config := range this.InputRunners {
 		cf := input_config.(toml.Primitive)
