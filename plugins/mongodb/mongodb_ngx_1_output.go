@@ -12,49 +12,7 @@ import (
 )
 
 /*
-{
-    "time": "Wed Apr 15 16:09:45 2015",
-    "servers": [{
-        "host_name": "cloud.vm",
-        "server_identity": "_server",
-        "req": 1,
-        "total_req": 2,
-        "normal_req": 1,
-        "total_normal_req": 2,
-        "attacks": 0,
-        "total_attacks": 0,
-        "trigger_verify": 0,
-        "total_trigger_verify": 0,
-        "passed_verify": 0,
-        "total_passed_verify": 0,
-        "bytes_recv": 200,
-        "total_bytes_recv": 200,
-        "bytes_send": 181,
-        "total_bytes_send": 181,
-        "bytes_cached": 0,
-        "total_bytes_cached": 0
-    },
-    {
-        "host_name": "cloud.vm",
-        "server_identity": "_",
-        "req": 1,
-        "total_req": 2,
-        "normal_req": 1,
-        "total_normal_req": 2,
-        "attacks": 0,
-        "total_attacks": 0,
-        "trigger_verify": 0,
-        "total_trigger_verify": 0,
-        "passed_verify": 0,
-        "total_passed_verify": 0,
-        "bytes_recv": 200,
-        "total_bytes_recv": 200,
-        "bytes_send": 181,
-        "total_bytes_send": 181,
-        "bytes_cached": 0,
-        "total_bytes_cached": 0
-    }]
-}
+{"time":"06/Jul/2015:16:35:47 +0800","host_name":"cloud.vm","servers":[{"server_identity":"_server","req":4,"normal_req":4,"bytes_recv":1802,"bytes_send":869,"bytes_cached":864},{"server_identity":"_","req":1,"normal_req":1,"bytes_recv":200,"bytes_send":5},{"server_identity":"test.cn","req":3,"normal_req":3,"bytes_recv":1602,"bytes_send":864,"bytes_cached":864}]}
 */
 
 type NgxStatus struct {
@@ -67,21 +25,14 @@ type NgxStatusServers struct {
 	HostName           string
 	ServerIdentity     string `json:"server_identity"`
 	Req                int64
-	TotalReq           int64 `json:"total_req"`
+	Attacks            int64
+	TriggerVerify	   int64 `json:"trigger_verify"`
+	PassedVerify	   int64 `json:"passed_verify"`
 	NormalReq          int64 `json:"normal_req"`
-	TotalNormalReq     int64 `json:"total_normal_req"`
-	Attacks            int64 `json:"attacks"`
-	TotalAttacks       int64 `json:"total_attacks"`
-	TriggerVerify      int64 `json:"trigger_verify"`
-	TotalTriggerVerify int64 `json:"total_trigger_verify"`
-	PassedVerify       int64 `json:"passed_verify"`
-	TotalPassedVerify  int64 `json:"total_passed_verify"`
+	CachedReq          int64 `json:"cached_req"`
 	BytesRecv          int64 `json:"bytes_recv"`
-	TotalBytesRecv     int64 `json:"total_bytes_recv"`
 	BytesSend          int64 `json:"bytes_send"`
-	TotalBytesSend     int64 `json:"total_bytes_send"`
 	BytesCached        int64 `json:"bytes_cached"`
-	TotalBytesCached   int64 `json:"total_bytes_cached"`
 	DateTime           time.Time
 }
 
