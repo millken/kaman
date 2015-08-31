@@ -22,18 +22,18 @@ type NgxStatus struct {
 }
 
 type NgxStatusServers struct {
-	HostName           string
-	ServerIdentity     string `json:"server_identity"`
-	Req                int64
-	Attacks            int64
-	TriggerVerify	   int64 `json:"trigger_verify"`
-	PassedVerify	   int64 `json:"passed_verify"`
-	NormalReq          int64 `json:"normal_req"`
-	CachedReq          int64 `json:"cached_req"`
-	BytesRecv          int64 `json:"bytes_recv"`
-	BytesSend          int64 `json:"bytes_send"`
-	BytesCached        int64 `json:"bytes_cached"`
-	DateTime           time.Time
+	HostName       string
+	ServerIdentity string `json:"server_identity"`
+	Req            int64
+	Attacks        int64
+	TriggerVerify  int64 `json:"trigger_verify"`
+	PassedVerify   int64 `json:"passed_verify"`
+	NormalReq      int64 `json:"normal_req"`
+	CachedReq      int64 `json:"cached_req"`
+	BytesRecv      int64 `json:"bytes_recv"`
+	BytesSend      int64 `json:"bytes_send"`
+	BytesCached    int64 `json:"bytes_cached"`
+	DateTime       time.Time
 }
 
 type MongodbNgx1Output struct {
@@ -85,6 +85,7 @@ func (self *MongodbNgx1Output) Run(runner plugins.OutputRunner) error {
 		session.Refresh()
 		coll := session.DB(self.config.Database).C(self.config.Collection)
 		pack := <-runner.InChan()
+		_ngx = NgxStatus{}
 
 		err := json.Unmarshal(pack.MsgBytes, &_ngx)
 		if err != nil {

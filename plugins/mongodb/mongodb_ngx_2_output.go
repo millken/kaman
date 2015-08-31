@@ -32,8 +32,10 @@ type NgxAttackStatus struct {
 
 type Attacks struct {
 	HostName       string
-	ServerIdentity string           `json:"server_identity"`
-	Attack         []map[string]int `json:"cc_attacks"`
+	ServerIdentity string         `json:"server_identity"`
+	NumberAttackIp int64          `json:"number_attack_ip"`
+	TopAttacksIp   map[string]int `json:"top_attacks_ip"`
+	TopAttacksUrl  map[string]int `json:"top_attacks_url"`
 	DateTime       time.Time
 }
 
@@ -86,6 +88,7 @@ func (self *MongodbNgx2Output) Run(runner plugins.OutputRunner) error {
 		session.Refresh()
 		coll := session.DB(self.config.Database).C(self.config.Collection)
 		pack := <-runner.InChan()
+		_ngx = NgxAttackStatus{}
 
 		err := json.Unmarshal(pack.MsgBytes, &_ngx)
 		if err != nil {
