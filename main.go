@@ -16,7 +16,14 @@ import (
 )
 
 var logs *log.Logger
+var VERSION string = "0.2"
+var gitVersion string
 
+func init() {
+	if len(gitVersion) > 0 {
+		VERSION = VERSION + "/" + gitVersion
+	}
+}
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -30,7 +37,13 @@ func main() {
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
 	v := flag.String("v", "error.log", "log file path")
+	showVersion := flag.Bool("version", false, "Prints version")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(VERSION)
+		return
+	}
 
 	f, err := os.OpenFile(*v, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
