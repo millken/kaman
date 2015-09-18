@@ -36,6 +36,7 @@ type KafkaInputConfig struct {
 	MaxWaitTime      uint32 `toml:"max_wait_time"`
 	EventBufferSize  int    `toml:"event_buffer_size"`
 	OffsetValue      int64
+	OffsetMethod     string
 }
 
 type KafkaInput struct {
@@ -84,6 +85,7 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 		MaxWaitTime:                250,
 		EventBufferSize:            16,
 		OffsetValue:                0,
+		OffsetMethod:               "Manual",
 	}
 	if err := toml.PrimitiveDecode(conf, k.config); err != nil {
 		return fmt.Errorf("Can't unmarshal kafka config: %s", err)
@@ -107,17 +109,35 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 	k.clientConfig.Consumer.MaxWaitTime = time.Duration(k.config.MaxWaitTime) * time.Millisecond
 	k.checkpointFilename = filepath.Join("kafka",
 		fmt.Sprintf("%s.%d.offset.bin", k.config.Topic, k.config.Partition))
-	if fileExists(k.checkpointFilename) {
-		if k.config.OffsetValue, err = readCheckpoint(k.checkpointFilename); err != nil {
-			return fmt.Errorf("readCheckpoint %s", err)
+	switch k.config.OffsetMethod {
+	case "Manual":
+		if fileExists(k.checkpointFilename) {
+			if k.config.OffsetValue, err = readCheckpoint(k.checkpointFilename); err != nil {
+				return fmt.Errorf("readCheckpoint %s", err)
+			}
+		} else {
+			if err = os.MkdirAll(filepath.Dir(k.checkpointFilename), 0766); err != nil {
+				return
+			}
+			k.config.OffsetValue = sarama.OffsetOldest
 		}
-	} else {
-		if err = os.MkdirAll(filepath.Dir(k.checkpointFilename), 0766); err != nil {
-			return
+	case "Newest":
+		k.config.OffsetValue = sarama.OffsetNewest
+		if fileExists(k.checkpointFilename) {
+			if err = os.Remove(k.checkpointFilename); err != nil {
+				return
+			}
 		}
+	case "Oldest":
 		k.config.OffsetValue = sarama.OffsetOldest
+		if fileExists(k.checkpointFilename) {
+			if err = os.Remove(k.checkpointFilename); err != nil {
+				return
+			}
+		}
+	default:
+		return fmt.Errorf("invalid offset_method: %s", k.config.OffsetMethod)
 	}
-
 	k.consumer, err = sarama.NewConsumer(k.config.Addrs, k.clientConfig)
 	return
 }
