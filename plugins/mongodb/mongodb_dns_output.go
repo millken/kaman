@@ -14,6 +14,7 @@ import (
 
 type DnsQueryStats struct {
 	Server, Domain, Month, Day, Hour string //server,domain
+	DateTime                         time.Time
 	//Nums int64
 }
 
@@ -72,11 +73,12 @@ func (self *MongodbDnsQueryOutput) Run(runner plugins.OutputRunner) error {
 		select {
 		case pack := <-runner.InChan():
 			dnsquery := DnsQueryStats{
-				Server: pack.Msg.Data["serverip"].(string),
-				Domain: pack.Msg.Data["primarydomain"].(string),
-				Month:  pack.Msg.Data["month"].(string),
-				Day:    pack.Msg.Data["day"].(string),
-				Hour:   pack.Msg.Data["hour"].(string),
+				Server:   pack.Msg.Data["serverip"].(string),
+				Domain:   pack.Msg.Data["primarydomain"].(string),
+				Month:    pack.Msg.Data["month"].(string),
+				Day:      pack.Msg.Data["day"].(string),
+				Hour:     pack.Msg.Data["hour"].(string),
+				DateTime: time.Now(),
 			}
 			if num := outBatch[dnsquery]; num > 0 {
 				outBatch[dnsquery] = num + 1

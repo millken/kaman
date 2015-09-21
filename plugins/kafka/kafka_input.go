@@ -37,6 +37,7 @@ type KafkaInputConfig struct {
 	EventBufferSize  int    `toml:"event_buffer_size"`
 	OffsetValue      int64
 	OffsetMethod     string
+	OffsetPath       string
 }
 
 type KafkaInput struct {
@@ -86,6 +87,7 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 		EventBufferSize:            16,
 		OffsetValue:                0,
 		OffsetMethod:               "Manual",
+		OffsetPath:                 "/tmp/kaman",
 	}
 	if err := toml.PrimitiveDecode(conf, k.config); err != nil {
 		return fmt.Errorf("Can't unmarshal kafka config: %s", err)
@@ -107,8 +109,11 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 	k.clientConfig.Consumer.Fetch.Min = k.config.MinFetchSize
 	k.clientConfig.Consumer.Fetch.Max = k.config.MaxMessageSize
 	k.clientConfig.Consumer.MaxWaitTime = time.Duration(k.config.MaxWaitTime) * time.Millisecond
-	k.checkpointFilename = filepath.Join("kafka",
+	k.checkpointFilename = filepath.Join(k.config.OffsetPath,
 		fmt.Sprintf("%s.%d.offset.bin", k.config.Topic, k.config.Partition))
+	if err = os.MkdirAll(filepath.Dir(k.checkpointFilename), 0766); err != nil {
+		return
+	}
 	switch k.config.OffsetMethod {
 	case "Manual":
 		if fileExists(k.checkpointFilename) {
@@ -116,9 +121,6 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 				return fmt.Errorf("readCheckpoint %s", err)
 			}
 		} else {
-			if err = os.MkdirAll(filepath.Dir(k.checkpointFilename), 0766); err != nil {
-				return
-			}
 			k.config.OffsetValue = sarama.OffsetOldest
 		}
 	case "Newest":
