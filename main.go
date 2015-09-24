@@ -16,7 +16,7 @@ import (
 )
 
 var logs *log.Logger
-var VERSION string = "0.2.1"
+var VERSION string = "0.2.3"
 var gitVersion string
 
 func init() {

@@ -46,6 +46,7 @@ func (self *Kafka3MongoFilter) Run(pack *plugins.PipelinePack) (rpack *plugins.P
 	rpack.Msg.Data["month"] = times_arr[1]
 	rpack.Msg.Data["day"] = times_arr[2]
 	rpack.Msg.Data["hour"] = times_arr[3]
+	rpack.Msg.Data["times"] = t2.Format("2006-01-02 15:00:00")
 	//log.Printf("Kafka3MongoFilter : %q", rpack.Msg.Data)
 	return rpack, nil
 }

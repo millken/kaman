@@ -41,6 +41,8 @@ type KafkaInputConfig struct {
 }
 
 type KafkaInput struct {
+	processMessageQps      int32
+	processMessageOffset   int64
 	processMessageCount    int64
 	processMessageFailures int64
 
@@ -147,6 +149,7 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 func (k *KafkaInput) Run(runner plugins.InputRunner) (err error) {
 	log.Printf("KafkaInput Run. Topic: %s, Partition: %d, OffsetValue: %d\n", k.config.Topic, k.config.Partition, k.config.OffsetValue)
 	k.stopChan = make(chan bool)
+	var ticker = time.Tick(time.Duration(1000) * time.Millisecond)
 	consumer, err := k.consumer.ConsumePartition(k.config.Topic, k.config.Partition, k.config.OffsetValue)
 	defer func() {
 		k.consumer.Close()
@@ -163,9 +166,8 @@ consumerLoop:
 		case message := <-consumer.Messages():
 			//log.Printf("\nkey=%s value=%s\n Topic=%s\nPartition=%d\nOffset=%d\n", message.Key, message.Value, message.Topic, message.Partition, message.Offset)
 			atomic.AddInt64(&k.processMessageCount, 1)
-			if err = k.writeCheckpoint(message.Offset + 1); err != nil {
-				return
-			}
+			atomic.AddInt32(&k.processMessageQps, 1)
+			atomic.StoreInt64(&k.processMessageOffset, message.Offset+1)
 			pack := <-runner.InChan()
 
 			pack.MsgBytes = message.Value
@@ -177,7 +179,13 @@ consumerLoop:
 				continue
 			}
 			runner.RouterChan() <- pack
+		case <-ticker:
+			log.Printf("consumer message qps : %d", k.processMessageQps)
+			atomic.StoreInt32(&k.processMessageQps, 0)
+			if err = k.writeCheckpoint(atomic.LoadInt64(&k.processMessageOffset)); err != nil {
 
+				log.Printf("writeCheckpoint [%s] err : %s", k.common.Filter, err)
+			}
 		case <-k.stopChan:
 			break consumerLoop
 		}

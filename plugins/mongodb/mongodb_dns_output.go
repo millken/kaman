@@ -13,8 +13,8 @@ import (
 )
 
 type DnsQueryStats struct {
-	Server, Domain, Month, Day, Hour string //server,domain
-	DateTime                         time.Time
+	DateTime, Server, Domain, Month, Day, Hour string //server,domain
+	//DateTime                         time.Time
 	//Nums int64
 }
 
@@ -78,7 +78,7 @@ func (self *MongodbDnsQueryOutput) Run(runner plugins.OutputRunner) error {
 				Month:    pack.Msg.Data["month"].(string),
 				Day:      pack.Msg.Data["day"].(string),
 				Hour:     pack.Msg.Data["hour"].(string),
-				DateTime: time.Now(),
+				DateTime: pack.Msg.Data["times"].(string),
 			}
 			if num := outBatch[dnsquery]; num > 0 {
 				outBatch[dnsquery] = num + 1
