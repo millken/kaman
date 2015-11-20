@@ -63,7 +63,8 @@ func (self *MongodbDnsQueryOutput) Run(runner plugins.OutputRunner) error {
 		MaxBytes: self.config.CappedSize * 1024 * 1024,
 	}
 
-	coll := session.DB(self.config.Database).C(self.config.Collection)
+	collection := self.config.Collection + time.Now().Format("2006")
+	coll := session.DB(self.config.Database).C(collection)
 	err = coll.Create(info)
 	if err != nil && err.Error() != "collection already exists" {
 		return err
@@ -87,11 +88,11 @@ func (self *MongodbDnsQueryOutput) Run(runner plugins.OutputRunner) error {
 			}
 			pack.Recycle()
 		case <-ticker:
-			session.Refresh()
+			//session.Refresh()
 			batchData = outBatch
 			outBatch = make(map[DnsQueryStats]int)
-			collection := self.config.Collection + time.Now().Format("2006")
-			coll := session.DB(self.config.Database).C(collection)
+			//collection := self.config.Collection + time.Now().Format("2006")
+			//coll := session.DB(self.config.Database).C(collection)
 			for q, n := range batchData {
 				_, err := coll.Upsert(q, bson.M{"$inc": bson.M{"querys": n}})
 				if err != nil {

@@ -147,10 +147,14 @@ func (k *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) 
 }
 
 func (k *KafkaInput) Run(runner plugins.InputRunner) (err error) {
+	//k.config.OffsetValue = 377529749
 	log.Printf("KafkaInput Run. Topic: %s, Partition: %d, OffsetValue: %d\n", k.config.Topic, k.config.Partition, k.config.OffsetValue)
 	k.stopChan = make(chan bool)
 	var ticker = time.Tick(time.Duration(1000) * time.Millisecond)
 	consumer, err := k.consumer.ConsumePartition(k.config.Topic, k.config.Partition, k.config.OffsetValue)
+	if err != nil {
+		log.Printf("err %q", err)
+	}
 	defer func() {
 		k.consumer.Close()
 		consumer.Close()
@@ -163,6 +167,14 @@ consumerLoop:
 		select {
 		case err := <-consumer.Errors():
 			log.Printf("consumer loop err : %q", err)
+			if k.checkpointFile != nil {
+				k.checkpointFile.Close()
+				k.checkpointFile = nil
+			}
+			if err := os.Remove(k.checkpointFilename); err != nil {
+				log.Printf(" remove offset file error: %q", err)
+			}
+			return err
 		case message := <-consumer.Messages():
 			//log.Printf("\nkey=%s value=%s\n Topic=%s\nPartition=%d\nOffset=%d\n", message.Key, message.Value, message.Topic, message.Partition, message.Offset)
 			atomic.AddInt64(&k.processMessageCount, 1)
@@ -180,7 +192,7 @@ consumerLoop:
 			}
 			runner.RouterChan() <- pack
 		case <-ticker:
-			log.Printf("consumer message qps : %d", k.processMessageQps)
+			log.Printf("consumer message qps : %d, offset : %d", k.processMessageQps, k.processMessageOffset)
 			atomic.StoreInt32(&k.processMessageQps, 0)
 			if err = k.writeCheckpoint(atomic.LoadInt64(&k.processMessageOffset)); err != nil {
 
