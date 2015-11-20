@@ -37,7 +37,7 @@ deps:
 build: 
 	$(eval SHA := $(shell git rev-parse --short=5 HEAD))
 	@echo "$(OK_COLOR)==> Compiling binary$(NO_COLOR)"	
-	godep go build -ldflags "-X main.gitVersion '$(SHA)'" -o bin/kaman
+	godep go build -ldflags "-X main.gitVersion='$(SHA)'" -o bin/kaman
 
 release: 
 	gox -osarch="darwin/amd64 darwin/386 linux/amd64 linux/386 windows/amd64 windows/386" -output="./bin/kaman_{{.OS}}_{{.Arch}}"
