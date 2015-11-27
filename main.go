@@ -16,7 +16,7 @@ import (
 )
 
 var logs *log.Logger
-var VERSION string = "0.2.3"
+var VERSION string = "0.3.0"
 var gitVersion string
 
 func init() {
@@ -32,7 +32,7 @@ func main() {
 			}
 		}
 	}()
-	c := flag.String("c", "gofluent.conf", "config filepath")
+	c := flag.String("c", "kaman.conf", "config filepath")
 	p := flag.String("p", "", "write cpu profile to file")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
@@ -73,12 +73,13 @@ func main() {
 	if err != nil {
 		log.Fatalln("read config failed, err:", err)
 	}
+	log.Printf("masterConfig: %v\npulgConf : %v", masterConf, plugConf)
 	pipeline := plugins.NewPipeLine()
 	if err := pipeline.LoadConfig(plugConf); err != nil {
 		log.Fatalln("load config failed, err:", err)
 	}
-	pipeline.Run()
-	log.Printf("masterConfig: %v\npulgConf : %v", masterConf, plugConf)
+	plugMasterConf := plugins.DefaultMasterConfig()
+	pipeline.Run(plugMasterConf)
 
 }
 

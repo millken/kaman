@@ -58,10 +58,6 @@ func (hli *HttpListenInput) RequestHandler(w http.ResponseWriter, req *http.Requ
 	pack.MsgBytes = body
 	pack.Msg.Tag = hli.common.Tag
 	pack.Msg.Timestamp = time.Now().Unix()
-	pack, err = plugins.PipeFilter(hli.common.Filter, pack)
-	if err != nil {
-		log.Printf("filter [%s] err : %s", hli.common.Filter, err)
-	}
 	hli.ir.RouterChan() <- pack
 	//log.Printf("%s, %s", req.RemoteAddr, string(body))
 	//w.Write([]byte("ok"))

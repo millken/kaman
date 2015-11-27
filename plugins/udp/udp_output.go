@@ -31,7 +31,7 @@ type UdpOutput struct {
 	conn   net.Conn
 }
 
-func (self *UdpOutput) Init(conf toml.Primitive) error {
+func (self *UdpOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) error {
 	var err error
 	log.Println("UdpOutput Init.")
 	self.config = &UdpOutputConfig{

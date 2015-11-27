@@ -3,15 +3,19 @@ package plugins
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"regexp"
 	"sync/atomic"
+	"syscall"
 
 	"github.com/bbangert/toml"
+	notify "github.com/bitly/go-notify"
 )
 
 type PluginConfig map[string]toml.Primitive
 
-var PluginTypeRegex = regexp.MustCompile("(Input|Output)$")
+var PluginTypeRegex = regexp.MustCompile("(Input|Output|Encoder|Decoder)$")
 
 func getPluginType(pluginType string) string {
 	pluginCats := PluginTypeRegex.FindStringSubmatch(pluginType)
@@ -63,6 +67,8 @@ func (this *PipelinePack) Recycle() {
 type Pipeline struct {
 	InputRunners  []interface{}
 	OutputRunners []interface{}
+	DecodeRunners []interface{}
+	EncodeRunners []interface{}
 	router        Router
 }
 
@@ -75,7 +81,7 @@ func NewPipeLine() *Pipeline {
 
 func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 	for k, v := range plugConfig {
-
+		log.Printf("v %+v", v)
 		plugCommon := &PluginCommonConfig{}
 		if err := toml.PrimitiveDecode(v, plugCommon); err != nil {
 			return fmt.Errorf("Can't unmarshal config: %s", err)
@@ -92,6 +98,10 @@ func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 			this.InputRunners = append(this.InputRunners, v)
 		case "Output":
 			this.OutputRunners = append(this.OutputRunners, v)
+		case "Encoder":
+			this.EncodeRunners = append(this.EncodeRunners, v)
+		case "Decoder":
+			this.DecodeRunners = append(this.DecodeRunners, v)
 		}
 		log.Printf("%s => %s", k, plugCommon.Type)
 	}
@@ -99,10 +109,15 @@ func (this *Pipeline) LoadConfig(plugConfig map[string]toml.Primitive) error {
 	return nil
 }
 
-func (this *Pipeline) Run() {
+func (this *Pipeline) Run(mc *MasterConfig) {
 	log.Println("Starting service...")
-
-	PoolSize := 1000
+	plugCommon := &PluginCommonConfig{
+		Type:    "",
+		Decoder: "",
+		Tag:     "",
+		Encoder: "",
+	}
+	PoolSize := 10
 	rChan := make(chan *PipelinePack, PoolSize)
 	this.router.AddInChan(rChan)
 	if len(this.InputRunners) == 0 {
@@ -125,10 +140,6 @@ func (this *Pipeline) Run() {
 	for _, output_config := range this.OutputRunners {
 		cf := output_config.(toml.Primitive)
 
-		plugCommon := &PluginCommonConfig{
-			Type: "",
-			Tag:  "",
-		}
 		toml.PrimitiveDecode(cf, plugCommon)
 		inChan := make(chan *PipelinePack, PoolSize)
 		oRunner := NewOutputRunner(inChan)
@@ -137,5 +148,59 @@ func (this *Pipeline) Run() {
 		go oRunner.Start(cf)
 	}
 
-	this.router.Loop()
+	for _, encode_config := range this.EncodeRunners {
+		toml.PrimitiveDecode(encode_config.(toml.Primitive), plugCommon)
+		encoder_plugin, ok := encoder_plugins[plugCommon.Type]
+		if !ok {
+			log.Fatalln("unkown encoder ", plugCommon.Type)
+		}
+		encoder := encoder_plugin()
+
+		err := encoder.(Encoder).Init(encode_config.(toml.Primitive))
+		if err != nil {
+			log.Fatalln("encoder.(Encoder).Init", err)
+		}
+		encoders[plugCommon.Encoder] = encoder.(Encoder)
+	}
+
+	for _, decode_config := range this.DecodeRunners {
+		toml.PrimitiveDecode(decode_config.(toml.Primitive), plugCommon)
+		decoder_plugin, ok := decoder_plugins[plugCommon.Type]
+		if !ok {
+			log.Fatalln("unkown decoder ", plugCommon.Type)
+		}
+		decoder := decoder_plugin()
+
+		err := decoder.(Decoder).Init(decode_config.(toml.Primitive))
+		if err != nil {
+			log.Fatalln("decoder.(Decoder).Init", err)
+		}
+		decoders[plugCommon.Decoder] = decoder.(Decoder)
+	}
+
+	go this.router.Loop()
+	this.SignalWorker()
+}
+func (this *Pipeline) SignalWorker() {
+	// wait for sigint
+	ok := true
+	sigChan := make(chan os.Signal, 1)
+
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	for ok {
+		select {
+		case sig := <-sigChan:
+			switch sig {
+			case syscall.SIGHUP:
+				log.Println("Reload initiated.")
+				if err := notify.Post("reload", nil); err != nil {
+					log.Println("Error sending reload event: ", err)
+				}
+			case syscall.SIGINT, syscall.SIGTERM:
+				log.Println("Shutdown initiated.")
+				ok = false
+			}
+		}
+	}
 }

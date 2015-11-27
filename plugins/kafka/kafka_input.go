@@ -4,14 +4,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"git.oschina.net/millken/kaman/plugins"
-	"github.com/Shopify/sarama"
-	"github.com/bbangert/toml"
 	"log"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
+
+	"git.oschina.net/millken/kaman/plugins"
+	"github.com/Shopify/sarama"
+	"github.com/bbangert/toml"
 )
 
 type KafkaInputConfig struct {
@@ -185,18 +186,13 @@ consumerLoop:
 			pack.MsgBytes = message.Value
 			pack.Msg.Tag = k.common.Tag
 			pack.Msg.Timestamp = time.Now().Unix()
-			pack, err = plugins.PipeFilter(k.common.Filter, pack)
-			if err != nil {
-				log.Printf("filter [%s] err : %s", k.common.Filter, err)
-				continue
-			}
 			runner.RouterChan() <- pack
 		case <-ticker:
 			log.Printf("consumer message qps : %d, offset : %d", k.processMessageQps, k.processMessageOffset)
 			atomic.StoreInt32(&k.processMessageQps, 0)
 			if err = k.writeCheckpoint(atomic.LoadInt64(&k.processMessageOffset)); err != nil {
 
-				log.Printf("writeCheckpoint [%s] err : %s", k.common.Filter, err)
+				log.Printf("writeCheckpoint  err : %s", err)
 			}
 		case <-k.stopChan:
 			break consumerLoop

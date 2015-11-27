@@ -10,16 +10,23 @@ type Input interface {
 }
 
 type Output interface {
-	Init(config toml.Primitive) error
+	Init(pcf *PluginCommonConfig, config toml.Primitive) error
 	Run(out OutputRunner) error
 }
 
-type Filter interface {
-	Run(pack *PipelinePack) (*PipelinePack, error)
+type Decoder interface {
+	Init(config toml.Primitive) error
+	Decode(pack *PipelinePack) (*PipelinePack, error)
+}
+
+type Encoder interface {
+	Init(config toml.Primitive) error
+	Encode(pack *PipelinePack) (*PipelinePack, error)
 }
 
 type PluginCommonConfig struct {
-	Type   string `toml:"type"`
-	Tag    string `toml:"tag"`
-	Filter string `toml:"filter"`
+	Type    string `toml:"type"`
+	Tag     string `toml:"tag"`
+	Decoder string `toml:"decoder"`
+	Encoder string `toml:"encoder"`
 }

@@ -1,23 +1,37 @@
 package file
 
 import (
+	"log"
+
 	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
-	"log"
 )
 
 type StdoutOutput struct {
+	common *plugins.PluginCommonConfig
 }
 
-func (self *StdoutOutput) Init(conf toml.Primitive) error {
+func (self *StdoutOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) error {
+	self.common = pcf
+	log.Printf("use decoder: %s", self.common.Decoder)
 	return nil
 }
 
-func (self *StdoutOutput) Run(runner plugins.OutputRunner) error {
+func (self *StdoutOutput) Run(runner plugins.OutputRunner) (err error) {
 
 	for {
 		pack := <-runner.InChan()
-		log.Printf("stdout : %s\n", string(pack.MsgBytes))
+		pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
+		if err != nil {
+			log.Printf("PipeDecoder :%s", err)
+			continue
+		}
+		pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
+		if err != nil {
+			log.Printf("PipeEncoder :%s", err)
+			continue
+		}
+		log.Printf("stdout : %s\n", pack.MsgBytes)
 		pack.Recycle()
 	}
 

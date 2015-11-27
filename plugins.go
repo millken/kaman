@@ -1,7 +1,8 @@
 package main
 
 import (
-	_ "git.oschina.net/millken/kaman/filters"
+	_ "git.oschina.net/millken/kaman/decoders"
+	_ "git.oschina.net/millken/kaman/encoders"
 	_ "git.oschina.net/millken/kaman/plugins/file"
 	_ "git.oschina.net/millken/kaman/plugins/http"
 	_ "git.oschina.net/millken/kaman/plugins/kafka"
