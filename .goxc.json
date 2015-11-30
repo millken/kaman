@@ -1,0 +1,15 @@
+{
+	"Tasks": [
+		"default",
+		"publish-github"
+	],
+	"PackageVersion": "0.0.1",
+	"TaskSettings": {
+		"publish-github": {
+			"apikey": "1798178809bf6aac05de60cf0b2b77ae18da3ccd",
+			"owner": "millken",
+			"repository": "kaman"
+		}
+	},
+	"ConfigVersion": "0.9"
+}
