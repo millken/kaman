@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
-	"github.com/ActiveState/tail"
 	"github.com/bbangert/toml"
+	"github.com/hpcloud/tail"
+	"github.com/millken/kaman/plugins"
 )
 
 type TailInputConfig struct {

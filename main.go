@@ -12,7 +12,7 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
+	"github.com/millken/kaman/plugins"
 )
 
 var logs *log.Logger

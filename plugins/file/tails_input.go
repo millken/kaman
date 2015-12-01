@@ -12,9 +12,9 @@ import (
 	"regexp"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
 	"github.com/hpcloud/tail"
+	"github.com/millken/kaman/plugins"
 )
 
 type TailsInputConfig struct {

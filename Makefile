@@ -33,7 +33,7 @@ archive:
 
 deps:
 	@echo -e "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
-	@go get -d -v ./...
+	@go install -v ./...
 	@go list -f '{{range .TestImports}}{{.}} {{end}}' ./... | xargs -n1 go get -d
 
 build: 

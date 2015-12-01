@@ -7,7 +7,7 @@ import (
 	"net"
 	"runtime"
 
-	"git.oschina.net/millken/kaman/plugins"
+	"github.com/millken/kaman/plugins"
 
 	"github.com/bbangert/toml"
 )

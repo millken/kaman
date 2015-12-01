@@ -3,8 +3,8 @@ package decoders
 import (
 	"encoding/json"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/plugins"
 	"github.com/ugorji/go/codec"
 )
 

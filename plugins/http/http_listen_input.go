@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/plugins"
 )
 
 type HttpListenInput struct {

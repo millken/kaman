@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/plugins"
 	"github.com/optiopay/kafka"
 	"github.com/optiopay/kafka/proto"
 )

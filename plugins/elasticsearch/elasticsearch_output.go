@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/plugins"
 	mgo "gopkg.in/mgo.v2"
 )
 

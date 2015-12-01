@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.oschina.net/millken/kaman/plugins"
 	"github.com/Shopify/sarama"
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/plugins"
 )
 
 type KafkaInputConfig struct {
