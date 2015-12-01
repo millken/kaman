@@ -34,7 +34,7 @@ archive:
 deps:
 	@echo -e "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
 	@go install -v ./...
-	@go list -f '{{range .TestImports}}{{.}} {{end}}' ./... | xargs -n1 go get -d
+	#@go list -f '{{range .TestImports}}{{.}} {{end}}' ./... | xargs -n1 go get -d
 
 build: 
 	@echo -e "$(OK_COLOR)==> Compiling binary$(NO_COLOR)"	
