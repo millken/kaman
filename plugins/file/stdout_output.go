@@ -21,16 +21,18 @@ func (self *StdoutOutput) Run(runner plugins.OutputRunner) (err error) {
 
 	for {
 		pack := <-runner.InChan()
-		pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
-		if err != nil {
-			log.Printf("PipeDecoder :%s", err)
-			continue
-		}
-		pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
-		if err != nil {
-			log.Printf("PipeEncoder :%s", err)
-			continue
-		}
+		/*
+			pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
+			if err != nil {
+				log.Printf("PipeDecoder :%s", err)
+				continue
+			}
+			pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
+			if err != nil {
+				log.Printf("PipeEncoder :%s", err)
+				continue
+			}
+		*/
 		log.Printf("stdout : %s\n", pack.MsgBytes)
 		pack.Recycle()
 	}

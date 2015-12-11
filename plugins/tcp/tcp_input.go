@@ -110,17 +110,19 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 				} else {
 					log.Printf("disconnect : %s", raddr)
 					stopped = true
+
 				}
 			}
 			if len(line) == 0 {
 				continue
+			} else {
+				pack := <-self.runner.InChan()
+				pack.MsgBytes = bytes.TrimSpace(line)
+				pack.Msg.Tag = self.common.Tag
+				pack.Msg.Timestamp = time.Now().Unix()
+				count++
+				self.runner.RouterChan() <- pack
 			}
-			pack := <-self.runner.InChan()
-			pack.MsgBytes = bytes.TrimSpace(line)
-			pack.Msg.Tag = self.common.Tag
-			pack.Msg.Timestamp = time.Now().Unix()
-			count++
-			self.runner.RouterChan() <- pack
 		}
 	}
 }

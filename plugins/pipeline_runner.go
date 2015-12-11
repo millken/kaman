@@ -117,7 +117,7 @@ func (this *Pipeline) Run(mc *MasterConfig) {
 		Tag:     "",
 		Encoder: "",
 	}
-	PoolSize := 10
+	PoolSize := 1000
 	rChan := make(chan *PipelinePack, PoolSize)
 	this.router.AddInChan(rChan)
 	if len(this.InputRunners) == 0 {

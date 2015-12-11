@@ -40,6 +40,9 @@ build:
 	@echo -e "$(OK_COLOR)==> Compiling binary$(NO_COLOR)"	
 	godep go build -ldflags "-X main.gitVersion='$(BUILD_TAG)'" -o bin/kaman
 
+gdb:
+	godep go build -gcflags "-N" -ldflags "-w"
+
 release: 
 	gox -osarch="darwin/amd64 darwin/386 linux/amd64 linux/386 windows/amd64 windows/386" -output="./bin/kaman_{{.OS}}_{{.Arch}}"
 
