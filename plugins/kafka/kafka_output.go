@@ -13,13 +13,24 @@ import (
 	"github.com/optiopay/kafka/proto"
 )
 
+type outBatch struct {
+	data []*proto.Message
+}
+
+func newOutBatch() *outBatch {
+	return &outBatch{
+		data: make([]*proto.Message, 0),
+	}
+}
+
 type KafkaOutputConfig struct {
-	ClientId    string `toml:"client_id"`
-	Addrs       []string
-	Partition   int32
-	Topic       string
-	Partitions  int32
-	Distributer string
+	ClientId      string `toml:"client_id"`
+	Addrs         []string
+	Partition     int32
+	Topic         string
+	Partitions    int32
+	Distributer   string
+	FlushInterval uint32 `toml:"flush_interval"`
 }
 
 type KafkaOutput struct {
@@ -28,6 +39,8 @@ type KafkaOutput struct {
 	broker               *kafka.Broker
 	producer             kafka.Producer
 	distributingProducer kafka.DistributingProducer
+	batchChan            chan *outBatch
+	backChan             chan *outBatch
 }
 
 func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) (err error) {
@@ -38,9 +51,10 @@ func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primiti
 		hn = "kamanclient"
 	}
 	self.config = &KafkaOutputConfig{
-		ClientId:    hn,
-		Distributer: "None",
-		Partitions:  0,
+		ClientId:      hn,
+		Distributer:   "None",
+		Partitions:    0,
+		FlushInterval: 1000,
 	}
 	if err = toml.PrimitiveDecode(conf, self.config); err != nil {
 		return fmt.Errorf("Can't unmarshal KafkaOutput config: %s", err)
@@ -53,7 +67,7 @@ func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primiti
 	}
 
 	bcf := kafka.NewBrokerConf(self.config.ClientId)
-	bcf.AllowTopicCreation = true
+	//bcf.AllowTopicCreation = true
 
 	// connect to kafka cluster
 	self.broker, err = kafka.Dial(self.config.Addrs, bcf)
@@ -63,6 +77,7 @@ func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primiti
 
 	//defer broker.Close()
 	pf := kafka.NewProducerConf()
+	pf.RequiredAcks = 1
 	self.producer = self.broker.Producer(pf)
 	partitions, err := self.broker.PartitionCount(self.config.Topic)
 	if err != nil {
@@ -88,29 +103,54 @@ func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primiti
 	default:
 		return fmt.Errorf("invalid distributer: %s, must be one of these: \"Random\",\"RoundRobin\",\"Hash\"", self.config.Distributer)
 	}
-
+	self.batchChan = make(chan *outBatch)
+	self.backChan = make(chan *outBatch, 2) // Never block on the hand-back
 	return err
 }
 
 func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
+	var (
+		timer         *time.Timer
+		timerDuration time.Duration
+		//message       *proto.Message
+		//outMessages   []*proto.Message
+	)
+	errChan := make(chan error, 1)
+
+	go self.committer(runner, errChan)
+
+	out := newOutBatch()
+
 	ok := true
 	err = nil
 	var ticker = time.Tick(time.Duration(5) * time.Second)
+	timerDuration = time.Duration(self.config.FlushInterval) * time.Millisecond
+	timer = time.NewTimer(timerDuration)
 	if self.distributingProducer != nil {
 		for ok {
 			select {
 			case pack := <-runner.InChan():
-				if err == nil {
-					msg := &proto.Message{Value: pack.MsgBytes}
-					if _, err = self.distributingProducer.Distribute(self.config.Topic, msg); err != nil {
-						log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
-					}
+				pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
+				if err != nil {
+					log.Printf("PipeDecoder :%s", err)
+					continue
 				}
+				pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
+				if err != nil {
+					log.Printf("PipeEncoder :%s", err)
+					continue
+				}
+				message := &proto.Message{Value: pack.MsgBytes}
+				out.data = append(out.data, message)
 				pack.Recycle()
+			case <-timer.C:
+				self.batchChan <- out
+				out = <-self.backChan
+				timer.Reset(timerDuration)
 			case <-ticker:
 				if err != nil {
 					bcf := kafka.NewBrokerConf(self.config.ClientId)
-					bcf.AllowTopicCreation = true
+					//bcf.AllowTopicCreation = true
 
 					// connect to kafka cluster
 					self.broker, err = kafka.Dial(self.config.Addrs, bcf)
@@ -133,6 +173,28 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 	return nil
 }
 
+func (self *KafkaOutput) committer(or plugins.OutputRunner, errChan chan error) {
+	initBatch := newOutBatch()
+	self.backChan <- initBatch
+	var out *outBatch
+	var err error
+	ok := true
+
+	for ok {
+		select {
+		case out, ok = <-self.batchChan:
+			if !ok {
+				break
+			}
+			//log.Printf("out=%#v", out)
+			if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
+				log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
+			}
+			out.data = out.data[:0]
+			self.backChan <- out
+		}
+	}
+}
 func init() {
 	plugins.RegisterOutput("KafkaOutput", func() interface{} {
 		return new(KafkaOutput)
