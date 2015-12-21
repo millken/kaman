@@ -183,14 +183,16 @@ func (self *FileOutput) receiver(runner plugins.OutputRunner, errChan chan error
 			pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
 			if err != nil {
 				log.Printf("PipeDecoder :%s", err)
+				pack.Recycle()
 				continue
 			}
 			pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
 			if err != nil {
 				log.Printf("PipeEncoder :%s", err)
+				pack.Recycle()
 				continue
 			}
-			outBytes = pack.MsgBytes
+			outBytes = pack.Msg.MsgBytes
 
 			if outBytes != nil {
 				out.data = append(out.data, outBytes...)

@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bbangert/toml"
@@ -21,19 +22,19 @@ func (self *StdoutOutput) Run(runner plugins.OutputRunner) (err error) {
 
 	for {
 		pack := <-runner.InChan()
-		/*
-			pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
-			if err != nil {
-				log.Printf("PipeDecoder :%s", err)
-				continue
-			}
-			pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
-			if err != nil {
-				log.Printf("PipeEncoder :%s", err)
-				continue
-			}
-		*/
-		log.Printf("stdout : %s\n", pack.MsgBytes)
+		pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
+		if err != nil {
+			log.Printf("PipeDecoder :%s", err)
+			pack.Recycle()
+			continue
+		}
+		pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
+		if err != nil {
+			log.Printf("PipeEncoder :%s", err)
+			pack.Recycle()
+			continue
+		}
+		fmt.Printf("%s\n", pack.Msg.MsgBytes)
 		pack.Recycle()
 	}
 

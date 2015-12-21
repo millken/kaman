@@ -26,6 +26,7 @@ func getPluginType(pluginType string) string {
 }
 
 type Message struct {
+	MsgBytes  []byte
 	Tag       string
 	Timestamp int64
 	Data      map[string]interface{}
@@ -41,7 +42,10 @@ type PipelinePack struct {
 func NewPipelinePack(recycleChan chan *PipelinePack) (pack *PipelinePack) {
 	msgBytes := make([]byte, 100)
 	data := make(map[string]interface{})
-	msg := Message{Data: data}
+	msg := Message{
+		MsgBytes: msgBytes,
+		Data:     data,
+	}
 	return &PipelinePack{
 		MsgBytes:    msgBytes,
 		Msg:         msg,
@@ -53,6 +57,7 @@ func NewPipelinePack(recycleChan chan *PipelinePack) (pack *PipelinePack) {
 func (this *PipelinePack) Zero() {
 	this.MsgBytes = this.MsgBytes[:cap(this.MsgBytes)]
 	this.Msg.Data = make(map[string]interface{})
+	this.Msg.MsgBytes = this.MsgBytes
 	this.RefCount = 1
 }
 

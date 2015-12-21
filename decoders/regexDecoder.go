@@ -41,7 +41,7 @@ func (this *RegexDecoder) Decode(pack *plugins.PipelinePack) (rpack *plugins.Pip
 	//}
 	findResults := this.Match.FindStringSubmatch(string(pack.MsgBytes))
 	if findResults == nil {
-		return nil, fmt.Errorf("%s not match `%s`", rpack.MsgBytes, this.config.MatchRegex)
+		return rpack, fmt.Errorf("%s not match `%s`", rpack.MsgBytes, this.config.MatchRegex)
 	}
 	for index, name := range this.Match.SubexpNames() {
 		if index == 0 {

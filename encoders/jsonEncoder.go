@@ -26,9 +26,9 @@ func (this *JsonEncoder) Encode(pack *plugins.PipelinePack) (rpack *plugins.Pipe
 	rpack = pack
 	js, err := json.Marshal(rpack.Msg.Data)
 	if err != nil {
-		return nil, err
+		return pack, err
 	}
-	rpack.MsgBytes = js
+	rpack.Msg.MsgBytes = js
 	return rpack, nil
 
 }

@@ -75,7 +75,7 @@ func (self *KafkaOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primiti
 		return fmt.Errorf("cannot connect to kafka cluster: %s", err)
 	}
 
-	//defer broker.Close()
+	defer self.broker.Close()
 	pf := kafka.NewProducerConf()
 	pf.RequiredAcks = 1
 	self.producer = self.broker.Producer(pf)
@@ -133,11 +133,13 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 				pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
 				if err != nil {
 					log.Printf("PipeDecoder :%s", err)
+					pack.Recycle()
 					continue
 				}
 				pack, err = plugins.PipeEncoder(self.common.Encoder, pack)
 				if err != nil {
 					log.Printf("PipeEncoder :%s", err)
+					pack.Recycle()
 					continue
 				}
 				message := &proto.Message{Value: pack.MsgBytes}
