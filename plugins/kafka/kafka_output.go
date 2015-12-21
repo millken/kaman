@@ -142,7 +142,7 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 					pack.Recycle()
 					continue
 				}
-				message := &proto.Message{Value: pack.MsgBytes}
+				message := &proto.Message{Value: pack.Msg.MsgBytes}
 				out.data = append(out.data, message)
 				pack.Recycle()
 			case <-timer.C:

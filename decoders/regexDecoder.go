@@ -43,6 +43,8 @@ func (this *RegexDecoder) Decode(pack *plugins.PipelinePack) (rpack *plugins.Pip
 	if findResults == nil {
 		return rpack, fmt.Errorf("%s not match `%s`", rpack.MsgBytes, this.config.MatchRegex)
 	}
+	rpack.Msg.Lock()
+	defer rpack.Msg.Unlock()
 	for index, name := range this.Match.SubexpNames() {
 		if index == 0 {
 			continue

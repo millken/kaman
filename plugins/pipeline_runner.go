@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sync"
 	"sync/atomic"
 	"syscall"
 
@@ -30,6 +31,7 @@ type Message struct {
 	Tag       string
 	Timestamp int64
 	Data      map[string]interface{}
+	sync.RWMutex
 }
 
 type PipelinePack struct {
