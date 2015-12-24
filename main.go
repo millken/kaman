@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/millken/kaman/plugins"
+	"github.com/millken/kaman/reporter"
 )
 
 var logs *log.Logger
@@ -36,6 +37,7 @@ func main() {
 	p := flag.String("p", "", "write cpu profile to file")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
+	reportaddr := flag.String("reportaddr", "", "http report addr")
 	v := flag.String("v", "error.log", "log file path")
 	showVersion := flag.Bool("version", false, "Prints version")
 	flag.Parse()
@@ -67,6 +69,15 @@ func main() {
 
 	if *cpuprofile != "" {
 		profileCPU(*cpuprofile)
+	}
+
+	if *reportaddr != "" {
+		go func() {
+			report := reporter.NewServer(*reportaddr)
+			if err := report.Run(); err != nil {
+				log.Fatalln("report run err:", err)
+			}
+		}()
 	}
 
 	masterConf, plugConf, err := LoadConfig(*c)

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/millken/kaman/plugins"
-
 	"github.com/bbangert/toml"
+	"github.com/codahale/metrics"
+	"github.com/millken/kaman/plugins"
 )
 
 // Input plugin implementation that listens for Heka proself.col messages on a
@@ -78,6 +78,8 @@ func (self *TcpInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive)
 func (self *TcpInput) handleConnection(conn net.Conn) {
 	raddr := conn.RemoteAddr().String()
 	host, _, err := net.SplitHostPort(raddr)
+	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
+	//metrics.Counter(counter).Add()
 	if err != nil {
 		host = raddr
 	}
@@ -88,20 +90,25 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 	}()
 
 	count := 0
-	tmp_count := 0
-	qc := 0
+	//	tmp_count := 0
+	//qc := 0
 	stopped := false
 	reader := bufio.NewReader(conn)
-	ticker := time.Tick(time.Duration(5) * time.Second)
+	ticker := time.Tick(time.Duration(1) * time.Second)
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
 		case <-self.stopChan:
 			stopped = true
 		case <-ticker:
-			qc = count - tmp_count
-			tmp_count = count
-			log.Printf("receive %s record: %d, qps: %d", raddr, count, qc/5)
+			metrics.Counter(counter).AddN(uint64(count))
+			metrics.Counter(counter + ":qps").SetFunc(func() uint64 {
+				return uint64(count)
+			})
+			count = 0
+			//qc = count - tmp_count
+			//tmp_count = count
+			//log.Printf("receive %s record: %d, qps: %d", raddr, count, qc/5)
 		default:
 			line, err := reader.ReadBytes('\n')
 			if err != nil {

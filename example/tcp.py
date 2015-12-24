@@ -12,7 +12,7 @@ while i <= 10000000:
 	s.send(time.ctime() + "\n")
 	#s.send( str(i) + "\n")
 	i += 1
-	time.sleep(1)
+	#time.sleep(1)
 	
 #s.close()
  
