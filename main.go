@@ -17,8 +17,9 @@ import (
 )
 
 var logs *log.Logger
-var VERSION string = "0.3.0"
+var VERSION string = "0.4.0"
 var gitVersion string
+var buildDate string
 
 func init() {
 	if len(gitVersion) > 0 {
@@ -43,7 +44,8 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println(VERSION)
+		version := fmt.Sprintf("build date : %s\ngit version: %s\n", buildDate, VERSION)
+		fmt.Println(version)
 		return
 	}
 

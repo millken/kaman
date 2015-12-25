@@ -38,7 +38,7 @@ deps:
 
 build: 
 	@echo -e "$(OK_COLOR)==> Compiling binary$(NO_COLOR)"	
-	godep go build -ldflags "-X main.gitVersion='$(BUILD_TAG)'" -o bin/kaman
+	godep go build -ldflags "-X main.buildDate='$(BUILD_DATE)' -X main.gitVersion='$(BUILD_TAG)'" -o bin/kaman
 
 gdb:
 	godep go build -gcflags "-N" -ldflags "-w"
