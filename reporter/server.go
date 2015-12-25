@@ -39,6 +39,8 @@ func NewServer(addr string) *Server {
 	}
 	srv.starterFunc = defaultStarter
 
+	go rpsRepost()
+
 	mux := http.NewServeMux()
 	runtime := new(metricsHandler)
 	mux.Handle("/runtime", runtime)

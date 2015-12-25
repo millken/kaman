@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"expvar"
 	"net/http"
+	"strings"
+	"time"
 
-	_ "github.com/codahale/metrics/runtime"
+	"github.com/millken/metrics"
+	_ "github.com/millken/metrics/runtime"
 )
 
 const (
@@ -14,6 +17,24 @@ const (
 
 // metricsHandler displays expvars.
 type metricsHandler struct {
+}
+
+func rpsRepost() {
+	pre_counters := make(map[string]uint64)
+	//metrics.Reset()
+	for _ = range time.NewTicker(1 * time.Second).C {
+		counters, _ := metrics.Snapshot()
+		for n, c := range counters {
+			if strings.HasPrefix(n, "Tag") {
+				if pc, ok := pre_counters[n]; ok {
+					if !strings.HasSuffix(n, "rps") {
+						metrics.Counter(n + ":rps").Set(c - pc)
+					}
+				}
+			}
+		}
+		pre_counters = counters
+	}
 }
 
 func writeJsonResponse(w http.ResponseWriter, obj interface{}, err error) error {
