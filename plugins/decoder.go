@@ -25,5 +25,6 @@ func PipeDecoder(name string, pack *PipelinePack) (rpack *PipelinePack, err erro
 
 		return decoder.Decode(pack)
 	}
+	pack.Msg.MsgBytes = pack.MsgBytes
 	return pack, nil
 }
