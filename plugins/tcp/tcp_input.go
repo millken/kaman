@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/metrics"
 	"github.com/millken/kaman/plugins"
-	"github.com/millken/metrics"
 )
 
 // Input plugin implementation that listens for Heka proself.col messages on a
@@ -79,7 +79,7 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 	raddr := conn.RemoteAddr().String()
 	host, _, err := net.SplitHostPort(raddr)
 	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
-	//metrics.Counter(counter).Add()
+	mc := metrics.NewCounter(counter)
 	if err != nil {
 		host = raddr
 	}
@@ -114,7 +114,7 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 				pack.MsgBytes = bytes.TrimSpace(line)
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
-				metrics.Counter(counter).AddN(1)
+				mc.Add(1)
 
 				self.runner.RouterChan() <- pack
 			}

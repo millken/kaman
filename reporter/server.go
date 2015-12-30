@@ -41,7 +41,6 @@ func NewServer(addr string) *Server {
 
 	mux := http.NewServeMux()
 	runtime := NewMetric()
-	go runtime.Reporter()
 	mux.Handle("/runtime", runtime)
 
 	srv.server = &http.Server{

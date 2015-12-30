@@ -4,16 +4,13 @@ import (
 	"encoding/json"
 	"expvar"
 	"net/http"
-	"strings"
 	"sync"
-	"time"
 
-	"github.com/millken/metrics"
 	_ "github.com/millken/metrics/runtime"
 )
 
 const (
-	metricsVar = "metrics"
+	metricsVar = "kaman.metrics"
 )
 
 // metricsHandler displays expvars.
@@ -48,23 +45,4 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(val.String()))
-}
-
-func (mh *metricsHandler) Reporter() {
-	pre_counters := make(map[string]uint64)
-	for _ = range time.NewTicker(1 * time.Second).C {
-		mh.statsLock.Lock()
-		counters, _ := metrics.Snapshot()
-		for n, c := range counters {
-			if strings.HasPrefix(n, "Tag") {
-				if pc, ok := pre_counters[n]; ok {
-					if !strings.HasSuffix(n, "rps") {
-						metrics.Counter(n + ":rps").Set(c - pc)
-					}
-				}
-			}
-		}
-		pre_counters = counters
-		mh.statsLock.Unlock()
-	}
 }
