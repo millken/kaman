@@ -90,21 +90,13 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 		self.wg.Done()
 	}()
 
-	count := 0
-	tmp_count := 0
-	qc := 0
 	stopped := false
 	reader := bufio.NewReader(conn)
-	ticker := time.Tick(time.Duration(5) * time.Second)
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
 		case <-self.stopChan:
 			stopped = true
-		case <-ticker:
-			qc = count - tmp_count
-			tmp_count = count
-			log.Printf("receive %s record: %d, qps: %d", raddr, count, qc/5)
 		default:
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
@@ -123,7 +115,6 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 				pack.MsgBytes = bytes.TrimSpace(line)
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
-				count++
 				mc.Add(1)
 				self.runner.RouterChan() <- pack
 			}

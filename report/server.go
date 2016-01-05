@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
 
 type Server struct {
@@ -33,6 +35,32 @@ func defaultStarter(srv *Server) (err error) {
 
 	return nil
 }
+
+func wsServer(ws *websocket.Conn) {
+	defer func() {
+		if err := ws.Close(); err != nil {
+			log.Println("Websocket could not be closed", err.Error())
+		} else {
+			log.Println("Websocket closed")
+		}
+	}()
+	//q := ws.Request().URL.Query()
+	//name := q.Get("name")
+	stopped := false
+	ticker := time.Tick(time.Duration(1) * time.Second)
+	for !stopped {
+		select {
+		case <-ticker:
+			_, err := ws.Write([]byte("xxxx"))
+			if err != nil {
+				log.Printf("Websocket error: %s\n", err.Error())
+				stopped = true
+			}
+
+		}
+	}
+}
+
 func NewServer(addr string) *Server {
 	srv := &Server{
 		Address: addr,
@@ -42,12 +70,13 @@ func NewServer(addr string) *Server {
 	mux := http.NewServeMux()
 	runtime := NewMetric()
 	mux.Handle("/runtime", runtime)
+	mux.Handle("/ws", websocket.Handler(wsServer))
 
 	srv.server = &http.Server{
-		Addr:         srv.Address,
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:    srv.Address,
+		Handler: mux,
+		//ReadTimeout:  10 * time.Second,
+		//WriteTimeout: 10 * time.Second,
 	}
 	return srv
 }
