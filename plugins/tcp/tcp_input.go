@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/millken/kaman/metrics"
 	"github.com/millken/kaman/plugins"
 
 	"github.com/bbangert/toml"
@@ -78,6 +79,8 @@ func (self *TcpInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive)
 func (self *TcpInput) handleConnection(conn net.Conn) {
 	raddr := conn.RemoteAddr().String()
 	host, _, err := net.SplitHostPort(raddr)
+	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
+	mc := metrics.NewCounter(counter)
 	if err != nil {
 		host = raddr
 	}
@@ -121,6 +124,7 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
 				count++
+				mc.Add(1)
 				self.runner.RouterChan() <- pack
 			}
 		}
