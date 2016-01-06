@@ -1,6 +1,7 @@
 package report
 
 import (
+	"expvar"
 	"fmt"
 	"log"
 	"net"
@@ -37,6 +38,7 @@ func defaultStarter(srv *Server) (err error) {
 }
 
 func wsServer(ws *websocket.Conn) {
+	var buf string
 	defer func() {
 		if err := ws.Close(); err != nil {
 			log.Println("Websocket could not be closed", err.Error())
@@ -51,7 +53,13 @@ func wsServer(ws *websocket.Conn) {
 	for !stopped {
 		select {
 		case <-ticker:
-			_, err := ws.Write([]byte("xxxx"))
+			val := expvar.Get(metricsVar)
+			if val == nil {
+				buf = ""
+			} else {
+				buf = val.String()
+			}
+			_, err := ws.Write([]byte(buf))
 			if err != nil {
 				log.Printf("Websocket error: %s\n", err.Error())
 				stopped = true
