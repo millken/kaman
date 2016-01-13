@@ -15,6 +15,7 @@ import (
 	"github.com/millken/kaman/daemon"
 	"github.com/millken/kaman/plugins"
 	"github.com/millken/kaman/report"
+	"github.com/millken/kaman/daemon"
 )
 
 var logs *log.Logger
@@ -27,6 +28,7 @@ func init() {
 		VERSION = VERSION + "/" + gitVersion
 	}
 }
+
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -98,10 +100,9 @@ func main() {
 		log.Println("as daemon run")
 		pid := daemon.TryToRunAsDaemon("-d", "")
 		log.Printf("pid= %d, file=%s", pid, daemon.ProcessFile())
-	} else {
+	}else{
 		pipeline.Run(plugMasterConf)
 	}
-	pipeline.Run(plugMasterConf)
 
 }
 
