@@ -73,11 +73,11 @@ func ExecProcess(background bool, file string, args ...string) (int, error) {
 	filePath, _ := filepath.Abs(file)
 	cmd := exec.Command(filePath, args...)
 	if background {
-		cmd.Stdin = nil 
+		cmd.Stdin = nil
 		cmd.Stdout = nil
 		cmd.Stderr = nil
 	} else {
-		cmd.Stdin = os.Stdin 
+		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
@@ -124,11 +124,11 @@ func WaitProcess(background bool, file string, args []string) ([]byte, error) {
 	filePath, _ := filepath.Abs(file)
 	cmd := exec.Command(filePath, args...)
 	if background {
-		cmd.Stdin = nil 
+		cmd.Stdin = nil
 		cmd.Stdout = nil
 		cmd.Stderr = nil
 	} else {
-		cmd.Stdin = os.Stdin 
+		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
