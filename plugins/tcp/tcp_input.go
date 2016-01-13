@@ -108,11 +108,12 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 
 				}
 			}
-			if len(line) == 0 {
+			msg := bytes.TrimSpace(line)
+			if len(msg) == 0 {
 				continue
 			} else {
 				pack := <-self.runner.InChan()
-				pack.MsgBytes = bytes.TrimSpace(line)
+				pack.MsgBytes = msg
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
 				mc.Add(1)

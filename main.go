@@ -12,12 +12,13 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/millken/kaman/daemon"
 	"github.com/millken/kaman/plugins"
 	"github.com/millken/kaman/report"
 )
 
 var logs *log.Logger
-var VERSION string = "0.3.0"
+var VERSION string = "0.4.2"
 var gitVersion string
 var buildDate string
 
@@ -36,6 +37,7 @@ func main() {
 	}()
 	c := flag.String("c", "kaman.conf", "config filepath")
 	p := flag.String("p", "", "write cpu profile to file")
+	d := flag.Bool("d", false, "as daemon")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
 	reportaddr := flag.String("reportaddr", "", "http report addr")
@@ -92,6 +94,13 @@ func main() {
 		log.Fatalln("load config failed, err:", err)
 	}
 	plugMasterConf := plugins.DefaultMasterConfig()
+	if *d {
+		log.Println("as daemon run")
+		pid := daemon.TryToRunAsDaemon("-d", "")
+		log.Printf("pid= %d, file=%s", pid, daemon.ProcessFile())
+	} else {
+		pipeline.Run(plugMasterConf)
+	}
 	pipeline.Run(plugMasterConf)
 
 }
