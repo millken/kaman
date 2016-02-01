@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/millken/kaman/metrics"
 	"github.com/millken/kaman/plugins"
 
 	"github.com/bbangert/toml"
@@ -70,26 +71,13 @@ func (self *UdpInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive)
 
 func (self *UdpInput) Run(runner plugins.InputRunner) error {
 	var (
-		e                            error
-		packs, count, tcount, mcount int
+		e error
 	)
 	self.runner = runner
 	buf := make([]byte, UDP_PACKET_SIZE)
 	stopped := false
-	go func() {
-		ticker := time.Tick(time.Duration(5) * time.Second)
-		for !stopped {
-			select {
-			case <-self.stopChan:
-				stopped = true
-			case <-ticker:
-				mcount = count - tcount
-				tcount = count
-				log.Printf("total packages :%d record: %d, qps: %d", packs, count, mcount/5)
-			}
-		}
-
-	}()
+	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
+	mc := metrics.NewCounter(counter)
 	for !stopped {
 		select {
 		case <-self.stopChan:
@@ -103,7 +91,6 @@ func (self *UdpInput) Run(runner plugins.InputRunner) error {
 			//log.Printf("get %d from %s: %s", n, addr, buf[0:n])
 			self.buffer.Write(buf[:n])
 			for true {
-				count++
 				line, err := self.buffer.ReadBytes('\n')
 				if err != nil {
 					break
@@ -113,10 +100,10 @@ func (self *UdpInput) Run(runner plugins.InputRunner) error {
 				pack.MsgBytes = bytes.TrimSpace(line)
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
+				mc.Add(1)
 				self.runner.RouterChan() <- pack
 			}
 
-			packs++
 		}
 	}
 	return e
