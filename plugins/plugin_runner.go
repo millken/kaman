@@ -89,24 +89,7 @@ func (this *oRunner) Start(cf toml.Primitive) {
 	if err := toml.PrimitiveDecode(cf, plugCommon); err != nil {
 		log.Fatalln("toml struct error")
 	}
-	/*
-		if plugCommon.Decoder != nil {
-			dec := &oDecoder{Name: ""}
-			if err := toml.PrimitiveDecode(plugCommon.Decoder.(toml.Primitive), dec); err != nil {
-				log.Fatalf("toml struct error: %s", err)
-			}
-			decoder_plugin, ok := decoder_plugins[dec.Name]
-			if !ok {
-				log.Fatalln("unkown decoder ", dec.Name)
-			}
-			decoder := decoder_plugin()
 
-			err := decoder.(Decoder).Init(plugCommon.Decoder)
-			if err != nil {
-				log.Fatalln("decoder.(Decoder).Init", err)
-			}
-		}
-	*/
 	output_plugin, ok := output_plugins[plugCommon.Type]
 	if !ok {
 		log.Fatalln("unkown type ", plugCommon.Type)

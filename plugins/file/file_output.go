@@ -195,6 +195,9 @@ func (self *FileOutput) receiver(runner plugins.OutputRunner, errChan chan error
 			}
 			outBytes = pack.Msg.MsgBytes
 
+			if len(outBytes) == 0 {
+				continue
+			}
 			if outBytes != nil {
 				out.data = append(out.data, outBytes...)
 				out.data = append(out.data, '\n')
@@ -205,9 +208,11 @@ func (self *FileOutput) receiver(runner plugins.OutputRunner, errChan chan error
 		case <-self.timerChan:
 			// This will block until the other side is ready to accept
 			// this batch, freeing us to start on the next one.
-			self.batchChan <- out
-			out = <-self.backChan
-			msgCounter = 0
+			if msgCounter >= 0 {
+				self.batchChan <- out
+				out = <-self.backChan
+				msgCounter = 0
+			}
 			timer.Reset(timerDuration)
 		case err = <-errChan:
 			ok = false

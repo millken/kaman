@@ -89,13 +89,21 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 		self.wg.Done()
 	}()
 
+	count := 0
 	stopped := false
 	reader := bufio.NewReader(conn)
+	ticker := time.Tick(time.Duration(1) * time.Minute)
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
 		case <-self.stopChan:
 			stopped = true
+		case <-ticker:
+			if count == 0 {
+				log.Printf("remove unused conn : %s", raddr)
+				stopped = true
+			}
+			count = 0
 		default:
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
@@ -107,15 +115,16 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 
 				}
 			}
-			if len(line) == 0 {
+			msg := bytes.TrimSpace(line)
+			if len(msg) == 0 {
 				continue
 			} else {
+				count++
 				pack := <-self.runner.InChan()
-				pack.MsgBytes = bytes.TrimSpace(line)
+				pack.MsgBytes = msg
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
 				mc.Add(1)
-
 				self.runner.RouterChan() <- pack
 			}
 		}

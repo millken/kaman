@@ -56,6 +56,8 @@ func Snapshot() (c map[string]int64) {
 	}
 	return
 }
+
+
 func init() {
 	expvar.Publish("kaman.metrics", expvar.Func(func() interface{} {
 		counters := Snapshot()

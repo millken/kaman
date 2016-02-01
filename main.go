@@ -12,12 +12,13 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/millken/kaman/daemon"
 	"github.com/millken/kaman/plugins"
-	"github.com/millken/kaman/reporter"
+	"github.com/millken/kaman/report"
 )
 
 var logs *log.Logger
-var VERSION string = "0.4.0"
+var VERSION string = "0.4.3"
 var gitVersion string
 var buildDate string
 
@@ -26,6 +27,7 @@ func init() {
 		VERSION = VERSION + "/" + gitVersion
 	}
 }
+
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -36,6 +38,7 @@ func main() {
 	}()
 	c := flag.String("c", "kaman.conf", "config filepath")
 	p := flag.String("p", "", "write cpu profile to file")
+	d := flag.Bool("d", false, "as daemon")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
 	reportaddr := flag.String("reportaddr", "", "http report addr")
@@ -75,8 +78,8 @@ func main() {
 
 	if *reportaddr != "" {
 		go func() {
-			report := reporter.NewServer(*reportaddr)
-			if err := report.Run(); err != nil {
+			reporter := report.NewServer(*reportaddr)
+			if err := reporter.Run(); err != nil {
 				log.Fatalln("report run err:", err)
 			}
 		}()
@@ -92,7 +95,13 @@ func main() {
 		log.Fatalln("load config failed, err:", err)
 	}
 	plugMasterConf := plugins.DefaultMasterConfig()
-	pipeline.Run(plugMasterConf)
+	if *d {
+		log.Println("as daemon run")
+		pid := daemon.TryToRunAsDaemon("-d", "")
+		log.Printf("pid= %d, file=%s", pid, daemon.ProcessFile())
+	} else {
+		pipeline.Run(plugMasterConf)
+	}
 
 }
 

@@ -14,7 +14,6 @@ type StdoutOutput struct {
 
 func (self *StdoutOutput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) error {
 	self.common = pcf
-	log.Printf("use decoder: %s", self.common.Decoder)
 	return nil
 }
 

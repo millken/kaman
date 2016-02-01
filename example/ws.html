@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<head>
+    <title>test</title>
+  </head>
+  <body>
+    <script>
+      var ws = new WebSocket('ws://127.0.0.1:4445/ws');
+      ws.onopen = function() {
+        document.body.style.backgroundColor = '#cfc';
+      };
+      ws.onclose = function() {
+        document.body.style.backgroundColor = null;
+      };
+      ws.onmessage = function(event) {
+        var p = document.createElement("p");
+        p.innerHTML = event.data;
+        p.appendChild(span);
+        lb.appendChild(document.body);   
+      };
+
+    </script>
+</body>
+</html>
