@@ -243,9 +243,7 @@ func (self *FileOutput) committer(or plugins.OutputRunner, errChan chan error) {
 				close(self.closing)
 				break
 			}
-			if len(out.data) == 0 {
-				continue
-			}
+
 			n, err := self.file.Write(out.data)
 			if err != nil {
 				log.Println(fmt.Errorf("Can't write to %s: %s", self.path, err))

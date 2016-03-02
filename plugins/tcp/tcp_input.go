@@ -93,6 +93,7 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 	stopped := false
 	reader := bufio.NewReader(conn)
 	ticker := time.Tick(time.Duration(1) * time.Minute)
+	msgbytes := make([]byte, 0, 10000)
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
@@ -115,16 +116,18 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 
 				}
 			}
-			msg := bytes.TrimSpace(line)
-			if len(msg) == 0 {
+			if !bytes.HasSuffix(line, []byte{'\n'}) {
+				msgbytes = append(msgbytes, line...)
 				continue
 			} else {
 				count++
+				msgbytes = append(msgbytes, line...)
 				pack := <-self.runner.InChan()
-				pack.MsgBytes = msg
+				pack.MsgBytes = bytes.TrimSpace(msgbytes)
 				pack.Msg.Tag = self.common.Tag
 				pack.Msg.Timestamp = time.Now().Unix()
 				mc.Add(1)
+				msgbytes = msgbytes[:0]
 				self.runner.RouterChan() <- pack
 			}
 		}
