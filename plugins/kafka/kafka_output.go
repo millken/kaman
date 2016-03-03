@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/bbangert/toml"
+	"github.com/millken/kaman/metrics"
 	"github.com/millken/kaman/plugins"
-	"github.com/millken/metrics"
 	"github.com/optiopay/kafka"
 	"github.com/optiopay/kafka/proto"
 )
@@ -183,7 +183,7 @@ func (self *KafkaOutput) committer(or plugins.OutputRunner, errChan chan error) 
 	var err error
 	ok := true
 	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
-
+	mc := metrics.NewCounter(counter)
 	for ok {
 		select {
 		case out, ok = <-self.batchChan:
@@ -197,7 +197,7 @@ func (self *KafkaOutput) committer(or plugins.OutputRunner, errChan chan error) 
 			if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
 				log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
 			}
-			metrics.Counter(counter).AddN(1)
+			mc.Add(1)
 
 			out.data = out.data[:0]
 			self.backChan <- out

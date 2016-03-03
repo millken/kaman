@@ -78,6 +78,8 @@ func (self *UdpInput) Run(runner plugins.InputRunner) error {
 	stopped := false
 	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
 	mc := metrics.NewCounter(counter)
+	msgbytes := make([]byte, 0, 10000)
+
 	for !stopped {
 		select {
 		case <-self.stopChan:
@@ -95,13 +97,20 @@ func (self *UdpInput) Run(runner plugins.InputRunner) error {
 				if err != nil {
 					break
 				}
+				if !bytes.HasSuffix(line, []byte{'\n'}) {
+					msgbytes = append(msgbytes, line...)
+					continue
+				} else {
+					msgbytes = append(msgbytes, line...)
+					pack := <-self.runner.InChan()
+					pack.MsgBytes = bytes.TrimSpace(msgbytes)
+					pack.Msg.Tag = self.common.Tag
+					pack.Msg.Timestamp = time.Now().Unix()
+					mc.Add(1)
+					msgbytes = msgbytes[:0]
 
-				pack := <-self.runner.InChan()
-				pack.MsgBytes = bytes.TrimSpace(line)
-				pack.Msg.Tag = self.common.Tag
-				pack.Msg.Timestamp = time.Now().Unix()
-				mc.Add(1)
-				self.runner.RouterChan() <- pack
+					self.runner.RouterChan() <- pack
+				}
 			}
 
 		}

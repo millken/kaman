@@ -11,7 +11,6 @@ import (
 	"github.com/bbangert/toml"
 	"github.com/cactus/gostrftime"
 	"github.com/millken/kaman/plugins"
-	"github.com/millken/metrics"
 )
 
 type outBatch struct {
@@ -230,7 +229,6 @@ func (self *FileOutput) committer(or plugins.OutputRunner, errChan chan error) {
 	self.backChan <- initBatch
 	var out *outBatch
 	var err error
-	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
 
 	ok := true
 
@@ -252,7 +250,6 @@ func (self *FileOutput) committer(or plugins.OutputRunner, errChan chan error) {
 			} else {
 				self.file.Sync()
 			}
-			metrics.Counter(counter).AddN(1)
 
 			out.data = out.data[:0]
 			self.backChan <- out
