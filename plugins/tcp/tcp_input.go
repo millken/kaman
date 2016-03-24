@@ -93,7 +93,6 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 	stopped := false
 	reader := bufio.NewReader(conn)
 	ticker := time.Tick(time.Duration(1) * time.Minute)
-	msgbytes := make([]byte, 0, 10000)
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
@@ -108,28 +107,16 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 		default:
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
-				if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
-					// keep the connection open, we are just checking to see if
-				} else {
-					log.Printf("disconnect : %s", raddr)
-					stopped = true
-
-				}
+				log.Printf("disconnect : %s", raddr)
+				stopped = true
 			}
-			if !bytes.HasSuffix(line, []byte{'\n'}) {
-				msgbytes = append(msgbytes, line...)
-				continue
-			} else {
-				count++
-				msgbytes = append(msgbytes, line...)
-				pack := <-self.runner.InChan()
-				pack.MsgBytes = bytes.TrimSpace(msgbytes)
-				pack.Msg.Tag = self.common.Tag
-				pack.Msg.Timestamp = time.Now().Unix()
-				mc.Add(1)
-				msgbytes = msgbytes[:0]
-				self.runner.RouterChan() <- pack
-			}
+			count++
+			pack := <-self.runner.InChan()
+			pack.MsgBytes = bytes.TrimSpace(line)
+			pack.Msg.Tag = self.common.Tag
+			pack.Msg.Timestamp = time.Now().Unix()
+			mc.Add(1)
+			self.runner.RouterChan() <- pack
 		}
 	}
 }

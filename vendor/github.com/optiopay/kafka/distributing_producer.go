@@ -22,9 +22,23 @@ type DistributingProducer interface {
 }
 
 type randomProducer struct {
-	rand       *rand.Rand
 	producer   Producer
 	partitions int32
+
+	rand saferand
+}
+
+// custom math/rand randomizer is not concurrency safe
+type saferand struct {
+	mu sync.Mutex
+	r  *rand.Rand
+}
+
+func (sr *saferand) Intn(n int) int {
+	sr.mu.Lock()
+	res := sr.r.Intn(n)
+	sr.mu.Unlock()
+	return res
 }
 
 // NewRandomProducer wraps given producer and return DistributingProducer that
@@ -32,7 +46,7 @@ type randomProducer struct {
 // [0, numPartitions)
 func NewRandomProducer(p Producer, numPartitions int32) DistributingProducer {
 	return &randomProducer{
-		rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:       saferand{r: rand.New(rand.NewSource(time.Now().UnixNano()))},
 		producer:   p,
 		partitions: numPartitions,
 	}
@@ -42,7 +56,13 @@ func NewRandomProducer(p Producer, numPartitions int32) DistributingProducer {
 // partition. All messages written within single Produce call are atomically
 // written to the same destination.
 func (p *randomProducer) Distribute(topic string, messages ...*proto.Message) (offset int64, err error) {
-	part := p.rand.Intn(int(p.partitions))
+	// In the case there are no partitions, which may happen for new topics
+	// when AllowTopicCreation is passed, we will write to partition 0
+	// since rand.Intn panics with 0
+	part := 0
+	if p.partitions > 0 {
+		part = p.rand.Intn(int(p.partitions))
+	}
 	return p.producer.Produce(topic, int32(part), messages...)
 }
 
