@@ -18,7 +18,7 @@ import (
 )
 
 var logs *log.Logger
-var VERSION string = "0.4.3"
+var VERSION string = "0.4.4"
 var gitVersion string
 var buildDate string
 

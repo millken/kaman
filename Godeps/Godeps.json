@@ -6,11 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/Shopify/sarama",
-			"Comment": "v1.6.1-39-gc36adfa",
-			"Rev": "c36adfa07b2d88dce4a02ca821367cb03a12068a"
-		},
-		{
 			"ImportPath": "github.com/bbangert/toml",
 			"Rev": "a2063ce2e5cf10e54ab24075840593d60f59b611"
 		},
@@ -19,18 +14,12 @@
 			"Rev": "0a148b8111d688ba7550fc7119fe0d5d8e650838"
 		},
 		{
-			"ImportPath": "github.com/eapache/go-resiliency/breaker",
-			"Comment": "v1.0.0-3-gf341fb4",
-			"Rev": "f341fb4dca45128e4aa86389fa6a675d55fe25e1"
-		},
-		{
-			"ImportPath": "github.com/eapache/queue",
-			"Comment": "v1.0.2",
-			"Rev": "ded5959c0d4e360646dc9e9908cff48666781367"
+			"ImportPath": "github.com/cactus/gostrftime",
+			"Rev": "954c81fa3060c62533da874e73c927d705862791"
 		},
 		{
 			"ImportPath": "github.com/golang/snappy",
-			"Rev": "723cc1e459b8eea2dea4583200fd60757d40097a"
+			"Rev": "5f1c01d9f64b941dd9582c638279d046eda6ca31"
 		},
 		{
 			"ImportPath": "github.com/hpcloud/tail",
@@ -38,16 +27,16 @@
 			"Rev": "157f8ef18fab1ee5be7ce010f1796e75cde8b24d"
 		},
 		{
-			"ImportPath": "github.com/klauspost/crc32",
-			"Rev": "3e5c38b8b170916b332a5ccb25f921314b98ba01"
-		},
-		{
 			"ImportPath": "github.com/optiopay/kafka",
-			"Rev": "51d6fc16766fa87d512e91301f1245dc7daecd2d"
+			"Rev": "717693fe7fb885866febff450b83fb7afcb87078"
 		},
 		{
 			"ImportPath": "github.com/ugorji/go/codec",
 			"Rev": "ea9cd21fa0bc41ee4bdd50ac7ed8cbc7ea2ed960"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "3b90a77d2885fb0429e8a21ab72fc73ca6f8b401"
 		},
 		{
 			"ImportPath": "gopkg.in/fsnotify.v1",

@@ -23,14 +23,14 @@ func TestAllSpecs(t *testing.T) {
 	r := gospec.NewRunner()
 	r.Parallel = false
 
-	r.AddSpec(DecodeSpec)
-	r.AddSpec(InsensitiveDecodeSpec)
-	r.AddSpec(ExamplePrimitiveDecodeSpec)
-	r.AddSpec(ExampleDecodeSpec)
-	r.AddSpec(DecodeStrictSpec)
-	r.AddSpec(PrimitiveDecodeStrictSpec)
-	r.AddSpec(DecodeStrictInterfaceSpec)
-	r.AddSpec(CheckTypeSpec)
+    r.AddSpec(DecodeSpec)
+    r.AddSpec(InsensitiveDecodeSpec)
+    r.AddSpec(ExamplePrimitiveDecodeSpec)
+    r.AddSpec(ExampleDecodeSpec)
+    r.AddSpec(DecodeStrictSpec)
+    r.AddSpec(PrimitiveDecodeStrictSpec)
+    r.AddSpec(DecodeStrictInterfaceSpec)
+    r.AddSpec(CheckTypeSpec)
 
 	gospec.MainGoTest(r, t)
 }
