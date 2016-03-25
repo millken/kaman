@@ -45,6 +45,7 @@ func (stdLogger) Warn(msg string, args ...interface{}) {
 func (stdLogger) Error(msg string, args ...interface{}) {
 	log.Printf(msg, args...)
 }
+
 func (self *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive) (err error) {
 	log.Println("KafkaInput Init.")
 	self.common = pcf
@@ -82,7 +83,6 @@ func (self *KafkaInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitiv
 	if err != nil {
 		return fmt.Errorf("cannot create kafka consumer for %s:%d: %s", self.config.Topic, self.config.Partition, err)
 	}
-
 	return err
 }
 
