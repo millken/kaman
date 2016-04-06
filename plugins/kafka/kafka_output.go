@@ -112,6 +112,7 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 	var (
 		timer         *time.Timer
 		timerDuration time.Duration
+		pack 		  *plugins.PipelinePack
 		//message       *proto.Message
 		//outMessages   []*proto.Message
 	)
@@ -120,16 +121,16 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 	go self.committer(runner, errChan)
 
 	out := newOutBatch()
-
+	message := &proto.Message{Value: nil}
 	ok := true
-	err = nil
-	var ticker = time.Tick(time.Duration(5) * time.Second)
+	var ticker = time.NewTicker(time.Duration(5) * time.Second)
+	defer ticker.Stop()
 	timerDuration = time.Duration(self.config.FlushInterval) * time.Millisecond
 	timer = time.NewTimer(timerDuration)
 	if self.distributingProducer != nil {
 		for ok {
 			select {
-			case pack := <-runner.InChan():
+			case pack = <-runner.InChan():
 				pack, err = plugins.PipeDecoder(self.common.Decoder, pack)
 				if err != nil {
 					log.Printf("PipeDecoder :%s", err)
@@ -142,14 +143,14 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 					pack.Recycle()
 					continue
 				}
-				message := &proto.Message{Value: pack.Msg.MsgBytes}
+				message.Value = pack.Msg.MsgBytes
 				out.data = append(out.data, message)
 				pack.Recycle()
 			case <-timer.C:
 				self.batchChan <- out
 				out = <-self.backChan
 				timer.Reset(timerDuration)
-			case <-ticker:
+			case <-ticker.C:
 				if err != nil {
 					bcf := kafka.NewBrokerConf(self.config.ClientId)
 					//bcf.AllowTopicCreation = true
@@ -164,9 +165,9 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 		}
 	} else {
 		for {
-			pack := <-runner.InChan()
-			msg := &proto.Message{Value: pack.MsgBytes}
-			if _, err := self.producer.Produce(self.config.Topic, self.config.Partition, msg); err != nil {
+			pack = <-runner.InChan()
+			message.Value = pack.MsgBytes
+			if _, err = self.producer.Produce(self.config.Topic, self.config.Partition, message); err != nil {
 				log.Printf("cannot produce message to %s:%d: %s", self.config.Topic, self.config.Partition, err)
 			}
 			pack.Recycle()
@@ -184,17 +185,15 @@ func (self *KafkaOutput) committer(or plugins.OutputRunner, errChan chan error) 
 	for ok {
 		select {
 		case out, ok = <-self.batchChan:
-			if !ok {
-				break
+			if ok {
+				//log.Printf("out=%#v", out)
+				if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
+					log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
+				}
+	
+				out.data = out.data[:0]
+				self.backChan <- out
 			}
-
-			//log.Printf("out=%#v", out)
-			if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
-				log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
-			}
-
-			out.data = out.data[:0]
-			self.backChan <- out
 		}
 	}
 }

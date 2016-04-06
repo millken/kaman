@@ -24,7 +24,8 @@ const (
 )
 
 var (
-	// Returned by consumers on Fetch when the retry limit is set and exceeded.
+	// ErrNoData is returned by consumers on Fetch when the retry limit is set
+	// and exceeded.
 	ErrNoData = errors.New("no data")
 
 	// Make sure interfaces are implemented
@@ -91,6 +92,7 @@ type clusterMetadata struct {
 	partitions map[string]int32         // topic to number of partitions
 }
 
+// BrokerConf represents the configuration of a broker.
 type BrokerConf struct {
 	// Kafka client ID.
 	ClientID string
@@ -151,6 +153,7 @@ type BrokerConf struct {
 	Logger Logger
 }
 
+// NewBrokerConf returns the default broker configuration.
 func NewBrokerConf(clientID string) BrokerConf {
 	return BrokerConf{
 		ClientID:           clientID,
@@ -169,9 +172,10 @@ func NewBrokerConf(clientID string) BrokerConf {
 type Broker struct {
 	conf BrokerConf
 
-	mu       sync.Mutex
-	metadata clusterMetadata
-	conns    map[int32]*connection
+	mu            sync.Mutex
+	metadata      clusterMetadata
+	conns         map[int32]*connection
+	nodeAddresses []string
 }
 
 // Dial connects to any node from a given list of kafka addresses and after
@@ -180,14 +184,14 @@ type Broker struct {
 // The returned broker is not initially connected to any kafka node.
 func Dial(nodeAddresses []string, conf BrokerConf) (*Broker, error) {
 	broker := &Broker{
-		conf:  conf,
-		conns: make(map[int32]*connection),
+		conf:          conf,
+		conns:         make(map[int32]*connection),
+		nodeAddresses: nodeAddresses,
 	}
 
 	if len(nodeAddresses) == 0 {
 		return nil, errors.New("no addresses provided")
 	}
-	numAddresses := len(nodeAddresses)
 
 	for i := 0; i < conf.DialRetryLimit; i++ {
 		if i > 0 {
@@ -197,22 +201,7 @@ func Dial(nodeAddresses []string, conf BrokerConf) (*Broker, error) {
 			time.Sleep(conf.DialRetryWait)
 		}
 
-		// This iterates starting at a random location in the slice, to prevent
-		// hitting the first server repeatedly
-		offset := rand.Intn(numAddresses)
-		for idx := 0; idx < numAddresses; idx++ {
-			addr := nodeAddresses[(idx+offset)%numAddresses]
-
-			conn, err := newTCPConnection(addr, conf.DialTimeout)
-			if err != nil {
-				conf.Logger.Debug("cannot connect",
-					"address", addr,
-					"error", err)
-				continue
-			}
-			defer func(c *connection) {
-				_ = c.Close()
-			}(conn)
+		ok := broker.dialRun(func(conn *connection, addr string) bool {
 			resp, err := conn.Metadata(&proto.MetadataReq{
 				ClientID: broker.conf.ClientID,
 				Topics:   nil,
@@ -221,18 +210,50 @@ func Dial(nodeAddresses []string, conf BrokerConf) (*Broker, error) {
 				conf.Logger.Debug("cannot fetch metadata",
 					"address", addr,
 					"error", err)
-				continue
+				return false
 			}
 			if len(resp.Brokers) == 0 {
 				conf.Logger.Debug("response with no broker data",
 					"address", addr)
-				continue
+			} else {
+				broker.cacheMetadata(resp)
 			}
-			broker.cacheMetadata(resp)
+			return true
+		})
+		if ok {
 			return broker, nil
 		}
 	}
 	return nil, errors.New("cannot connect")
+}
+
+// dialRun creates a new connection and run f with that connection. If f returns
+// true, dialRun returns true. If f returns false, it is run again with a
+// connection to another node. dialRun returns false when all nodes have been
+// unsuccessfully tried.
+func (b *Broker) dialRun(f func(c *connection, addr string) bool) (ok bool) {
+	numAddresses := len(b.nodeAddresses)
+
+	// This iterates starting at a random location in the slice, to prevent
+	// hitting the first server repeatedly.
+	offset := rand.Intn(numAddresses)
+	for idx := 0; idx < numAddresses; idx++ {
+		addr := b.nodeAddresses[(idx+offset)%numAddresses]
+
+		conn, err := newTCPConnection(addr, b.conf.DialTimeout)
+		if err != nil {
+			b.conf.Logger.Debug("cannot connect",
+				"address", addr,
+				"error", err)
+			continue
+		}
+		ok := f(conn, addr)
+		_ = conn.Close()
+		if ok {
+			return true
+		}
+	}
+	return false
 }
 
 // Close closes the broker and all active kafka nodes connections.
@@ -248,6 +269,7 @@ func (b *Broker) Close() {
 	}
 }
 
+// Metadata requests metadata information from any node.
 func (b *Broker) Metadata() (*proto.MetadataResp, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -349,7 +371,7 @@ func (b *Broker) cacheMetadata(resp *proto.MetadataResp) {
 		endpoints:  make(map[topicPartition]int32),
 		partitions: make(map[string]int32),
 	}
-	debugmsg := make([]interface{}, 0)
+	var debugmsg []interface{}
 	for _, node := range resp.Brokers {
 		addr := fmt.Sprintf("%s:%d", node.Host, node.Port)
 		b.metadata.nodes[node.NodeID] = addr
@@ -406,6 +428,52 @@ func (b *Broker) muLeaderConnection(topic string, partition int32) (conn *connec
 				"sleep", b.conf.LeaderRetryWait.String())
 			time.Sleep(b.conf.LeaderRetryWait)
 			b.mu.Lock()
+		}
+
+		// If there is no metadata it probably means no topic has been created
+		// yet. So create the topic if it is allowed.
+		if len(b.metadata.endpoints) == 0 && b.conf.AllowTopicCreation {
+			b.dialRun(func(conn *connection, addr string) bool {
+				// To create a topic we just need to request topic's metadata.
+				_, err = conn.Metadata(&proto.MetadataReq{
+					ClientID: b.conf.ClientID,
+					Topics:   []string{topic},
+				})
+				if err != nil {
+					b.conf.Logger.Info("failed to fetch metadata for new topic",
+						"addr", addr,
+						"topic", topic,
+						"error", err)
+					return false
+				}
+
+				// Once the topic has been created, Kafka needs some time to
+				// generate the correct metadata. So wait a little and retry a
+				// few times.
+				for i := 0; i < 5; i++ {
+					time.Sleep(50 * time.Millisecond)
+
+					resp, err := conn.Metadata(&proto.MetadataReq{
+						ClientID: b.conf.ClientID,
+					})
+					if err != nil {
+						b.conf.Logger.Info("failed to fetch metadata",
+							"addr", addr,
+							"error", err)
+						return false
+					}
+
+					// Check if the topic exists in the metadata. If it is ok,
+					// cache the metadata and exit the loop.
+					for _, t := range resp.Topics {
+						if t.Name == topic {
+							b.cacheMetadata(resp)
+							return true
+						}
+					}
+				}
+				return false
+			})
 		}
 
 		nodeID, ok := b.metadata.endpoints[tp]
@@ -676,12 +744,10 @@ func (b *Broker) OffsetLatest(topic string, partition int32) (offset int64, err 
 	return b.offset(topic, partition, -1)
 }
 
+// ProducerConf represents the configuration of a producer.
 type ProducerConf struct {
 	// Compression method to use, defaulting to proto.CompressionNone.
 	Compression proto.Compression
-
-	// Timeout of single produce request. By default, 5 seconds.
-	RequestTimeout time.Duration
 
 	// Message ACK configuration. Use proto.RequiredAcksAll to require all
 	// servers to write, proto.RequiredAcksLocal to wait only for leader node
@@ -689,6 +755,9 @@ type ProducerConf struct {
 	// Setting this to any other, greater than zero value will make producer to
 	// wait for given number of servers to confirm write before returning.
 	RequiredAcks int16
+
+	// Timeout of single produce request. By default, 5 seconds.
+	RequestTimeout time.Duration
 
 	// RetryLimit specify how many times message producing should be retried in
 	// case of failure, before returning the error to the caller. By default
@@ -707,8 +776,8 @@ type ProducerConf struct {
 func NewProducerConf() ProducerConf {
 	return ProducerConf{
 		Compression:    proto.CompressionNone,
-		RequestTimeout: 5 * time.Second,
 		RequiredAcks:   proto.RequiredAcksAll,
+		RequestTimeout: 5 * time.Second,
 		RetryLimit:     10,
 		RetryWait:      200 * time.Millisecond,
 		Logger:         nil,
@@ -852,6 +921,7 @@ func (p *producer) produce(topic string, partition int32, messages ...*proto.Mes
 	return offset, err
 }
 
+// ConsumerConf represents the configuration of a consumer.
 type ConsumerConf struct {
 	// Topic name that should be consumed
 	Topic string
@@ -1009,7 +1079,7 @@ func (c *consumer) consume() ([]*proto.Message, error) {
 			if c.conf.RetryWait > 0 {
 				time.Sleep(c.conf.RetryWait)
 			}
-			retry += 1
+			retry++
 			if c.conf.RetryLimit != -1 && retry > c.conf.RetryLimit {
 				return nil, ErrNoData
 			}
@@ -1150,6 +1220,7 @@ consumeRetryLoop:
 	return nil, resErr
 }
 
+// OffsetCoordinatorConf represents the configuration of an offset coordinator.
 type OffsetCoordinatorConf struct {
 	ConsumerGroup string
 

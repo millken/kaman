@@ -76,7 +76,9 @@ func NewServer(addr string) *Server {
 	srv.starterFunc = defaultStarter
 
 	mux := http.NewServeMux()
-	runtime := NewMetric()
+	stats := NewMetric()
+	runtime := NewRuntime()
+	mux.Handle("/stats", stats)
 	mux.Handle("/runtime", runtime)
 	mux.Handle("/ws", websocket.Handler(wsServer))
 

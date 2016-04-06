@@ -76,49 +76,64 @@ func (self *TcpInput) Init(pcf *plugins.PluginCommonConfig, conf toml.Primitive)
 // Listen on the provided TCP connection, extracting messages from the incoming
 // data until the connection is closed or Stop is called on the input.
 func (self *TcpInput) handleConnection(conn net.Conn) {
-	raddr := conn.RemoteAddr().String()
-	host, _, err := net.SplitHostPort(raddr)
+	var (frag []byte
+		 err error = nil
+		 pack *plugins.PipelinePack
+		)
+	//raddr := conn.RemoteAddr().String()
+	//host, _, err := net.SplitHostPort(raddr)
+	//if err != nil {
+	//	host = raddr
+	//}
+	//log.Printf("handle conn: %s, host: %s", raddr, host)
 	counter := fmt.Sprintf("Tag:%s,Type:%s", self.common.Tag, self.common.Type)
 	mc := metrics.NewCounter(counter)
-	if err != nil {
-		host = raddr
-	}
-	log.Printf("handle conn: %s, host: %s", raddr, host)
 	defer func() {
 		conn.Close()
 		self.wg.Done()
 	}()
-
+	
+	buf := make([]byte, 1024)
+	b1 := []byte{}
 	count := 0
 	stopped := false
-	reader := bufio.NewReader(conn)
-	ticker := time.Tick(time.Duration(1) * time.Minute)
+	reader := bufio.NewReaderSize(conn, 8192)
+	
+	ticker := time.NewTicker(time.Duration(1) * time.Minute)
+	defer ticker.Stop()
 	for !stopped {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		select {
 		case <-self.stopChan:
 			stopped = true
-		case <-ticker:
+		case <-ticker.C:
 			if count == 0 {
-				log.Printf("remove unused conn : %s", raddr)
+				//log.Printf("remove unused conn : %s", raddr)
 				stopped = true
 			}
 			count = 0
 		default:
-			line, err := reader.ReadBytes('\n')
+			frag, err = reader.ReadSlice('\n')
 			if err != nil {
-				log.Printf("disconnect : %s", raddr)
+				//log.Printf("disconnect : %s", raddr)
 				stopped = true
 			}
+			
+			buf = append(b1, frag...)
+			//log.Printf("%s", buf)
 			count++
-			pack := <-self.runner.InChan()
-			pack.MsgBytes = bytes.TrimSpace(line)
+			pack = <-self.runner.InChan()
+			pack.MsgBytes = bytes.TrimSpace(buf)
 			pack.Msg.Tag = self.common.Tag
 			pack.Msg.Timestamp = time.Now().Unix()
 			mc.Add(1)
 			self.runner.RouterChan() <- pack
+			buf = []byte{}
+			//b1 = []byte{}
 		}
 	}
+	buf = nil
+	reader = nil
 }
 
 func (self *TcpInput) Run(runner plugins.InputRunner) error {

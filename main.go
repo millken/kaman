@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
-	"runtime/pprof"
-	"time"
-
-	"github.com/millken/kaman/daemon"
+  	"net/http"
+	_ "net/http/pprof"
+	"github.com/VividCortex/godaemon"
 	"github.com/millken/kaman/plugins"
 	"github.com/millken/kaman/report"
 )
@@ -37,10 +34,8 @@ func main() {
 		}
 	}()
 	c := flag.String("c", "kaman.conf", "config filepath")
-	p := flag.String("p", "", "write cpu profile to file")
+	p := flag.String("p", "", "pprof serves")
 	d := flag.Bool("d", false, "as daemon")
-	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile := flag.String("memprofile", "", "write memory profile to this file")
 	reportaddr := flag.String("reportaddr", "", "http report addr")
 	v := flag.String("v", "error.log", "log file path")
 	showVersion := flag.Bool("version", false, "Prints version")
@@ -68,13 +63,6 @@ func main() {
 			log.Println(http.ListenAndServe("0.0.0.0:"+*p, nil))
 		}()
 	}
-	if *memprofile != "" {
-		profileMEM(*memprofile)
-	}
-
-	if *cpuprofile != "" {
-		profileCPU(*cpuprofile)
-	}
 
 	if *reportaddr != "" {
 		go func() {
@@ -97,39 +85,9 @@ func main() {
 	plugMasterConf := plugins.DefaultMasterConfig()
 	if *d {
 		log.Println("as daemon run")
-		pid := daemon.TryToRunAsDaemon("-d", "")
-		log.Printf("pid= %d, file=%s", pid, daemon.ProcessFile())
-	} else {
-		pipeline.Run(plugMasterConf)
-	}
+		godaemon.Daemonize()
+	} 
+	pipeline.Run(plugMasterConf)
 
-}
 
-func profileCPU(cpuprofile string) {
-	if cpuprofile != "" {
-		f, err := os.Create(cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-
-		time.AfterFunc(60*time.Second, func() {
-			pprof.StopCPUProfile()
-			f.Close()
-			log.Println("Stop profiling after 60 seconds")
-		})
-	}
-}
-
-func profileMEM(memprofile string) {
-	if memprofile != "" {
-		f, err := os.Create(memprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		time.AfterFunc(60*time.Second, func() {
-			pprof.WriteHeapProfile(f)
-			f.Close()
-		})
-	}
 }
