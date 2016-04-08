@@ -143,7 +143,7 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 					pack.Recycle()
 					continue
 				}
-				message.Value = pack.Msg.MsgBytes
+				message = &proto.Message{Value: pack.Msg.MsgBytes}
 				out.data = append(out.data, message)
 				pack.Recycle()
 			case <-timer.C:
@@ -166,7 +166,7 @@ func (self *KafkaOutput) Run(runner plugins.OutputRunner) (err error) {
 	} else {
 		for {
 			pack = <-runner.InChan()
-			message.Value = pack.MsgBytes
+			message = &proto.Message{Value: pack.Msg.MsgBytes}
 			if _, err = self.producer.Produce(self.config.Topic, self.config.Partition, message); err != nil {
 				log.Printf("cannot produce message to %s:%d: %s", self.config.Topic, self.config.Partition, err)
 			}
