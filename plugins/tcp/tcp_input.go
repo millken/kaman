@@ -119,17 +119,18 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 				stopped = true
 			}
 			
+			if len(frag) == 0 {
+				continue
+			}
 			buf = append(b1, frag...)
-			//log.Printf("%s", buf)
 			count++
 			pack = <-self.runner.InChan()
-			pack.MsgBytes = bytes.TrimSpace(buf)
+			pack.MsgBytes = bytes.TrimSpace(buf[:])
 			pack.Msg.Tag = self.common.Tag
 			pack.Msg.Timestamp = time.Now().Unix()
 			mc.Add(1)
 			self.runner.RouterChan() <- pack
-			buf = []byte{}
-			//b1 = []byte{}
+			buf = buf[:0] 
 		}
 	}
 	buf = nil

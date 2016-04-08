@@ -185,15 +185,17 @@ func (self *KafkaOutput) committer(or plugins.OutputRunner, errChan chan error) 
 	for ok {
 		select {
 		case out, ok = <-self.batchChan:
-			if ok {
-				//log.Printf("out=%#v", out)
-				if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
-					log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
-				}
-	
-				out.data = out.data[:0]
-				self.backChan <- out
+			if !ok {
+				log.Printf("batchChan are not ready")
+				continue
 			}
+			//log.Printf("out=%#v", out)
+			if _, err = self.distributingProducer.Distribute(self.config.Topic, out.data...); err != nil {
+				log.Printf("cannot produce message to %s: %s", self.config.Topic, err)
+			}
+
+			out.data = out.data[:0]
+			self.backChan <- out
 		}
 	}
 }
