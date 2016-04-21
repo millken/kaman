@@ -96,6 +96,7 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 	buf := make([]byte, 1024)
 	b1 := []byte{}
 	count := 0
+	limit_run_times := 60
 	stopped := false
 	reader := bufio.NewReaderSize(conn, 8192)
 	
@@ -107,10 +108,11 @@ func (self *TcpInput) handleConnection(conn net.Conn) {
 		case <-self.stopChan:
 			stopped = true
 		case <-ticker.C:
-			if count == 0 {
+			if count == 0 || limit_run_times <= 0 {
 				//log.Printf("remove unused conn : %s", raddr)
 				stopped = true
 			}
+			limit_run_times -= 1
 			count = 0
 		default:
 			frag, err = reader.ReadSlice('\n')
